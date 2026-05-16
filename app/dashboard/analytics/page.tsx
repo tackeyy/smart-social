@@ -128,8 +128,7 @@ export default function AnalyticsPage() {
               {metrics.length === 0 ? (
                 <p className="text-sm text-gray-500">データがありません</p>
               ) : (
-                <div className="overflow-x-auto">
-              <Table>
+                <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[300px]">本文</TableHead>
@@ -165,7 +164,6 @@ export default function AnalyticsPage() {
                     ))}
                   </TableBody>
                 </Table>
-              </div>
               )}
             </CardContent>
           </Card>

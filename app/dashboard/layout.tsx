@@ -34,7 +34,7 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen bg-manavi-bg">
       <NavBar
-        rightSlot={
+        desktopRightSlot={
           <>
             <AccountSelector
               accounts={xAccounts}
