@@ -36,9 +36,9 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // ダッシュボードへのアクセスは認証必須
-  if (!user && pathname.startsWith('/smart-social/dashboard')) {
+  if (!user && pathname.startsWith('/dashboard')) {
     const url = request.nextUrl.clone()
-    url.pathname = '/smart-social/auth/login'
+    url.pathname = '/auth/login'
     return NextResponse.redirect(url)
   }
 
