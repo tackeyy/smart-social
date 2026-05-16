@@ -61,13 +61,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'x_user_id must be a numeric string' }, { status: 400 })
   }
 
+  const access_token = process.env.X_ACCESS_TOKEN ?? ''
+  const access_token_secret = process.env.X_ACCESS_TOKEN_SECRET ?? ''
+
   const { data, error } = await supabase
     .from('x_accounts')
-    .insert({ user_id: user.id, screen_name, x_user_id })
+    .insert({ user_id: user.id, screen_name, x_user_id, access_token, access_token_secret })
     .select()
     .single()
 
   if (error) {
+    console.error('[POST /api/accounts]', error)
     if (error.code === '23505') {
       return NextResponse.json({ error: 'This X account is already registered' }, { status: 409 })
     }
