@@ -248,6 +248,9 @@ describe('DraftDetailDialog', () => {
 
 // ---- ScheduleCalendarView（月ナビゲーション） ----
 describe('ScheduleCalendarView 月ナビゲーション', () => {
+  beforeEach(() => { vi.useFakeTimers() })
+  afterEach(() => { vi.useRealTimers() })
+
   it('「次月」ボタンをクリックすると月表示が更新される', () => {
     // Arrange
     // 現在日付を 2024-06-15 に固定
@@ -269,8 +272,6 @@ describe('ScheduleCalendarView 月ナビゲーション', () => {
 
     // Assert: 2024年7月に更新される
     expect(screen.getByText('2024年7月')).toBeTruthy()
-
-    vi.useRealTimers()
   })
 
   it('「前月」ボタンをクリックすると月表示が更新される', () => {
@@ -293,7 +294,5 @@ describe('ScheduleCalendarView 月ナビゲーション', () => {
 
     // Assert: 2024年5月に更新される
     expect(screen.getByText('2024年5月')).toBeTruthy()
-
-    vi.useRealTimers()
   })
 })

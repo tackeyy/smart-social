@@ -1,13 +1,10 @@
 'use client'
 
 import { Badge } from '@/components/ui/badge'
-import type { Draft, DraftStatus } from '@/types/app'
+import type { Draft } from '@/types/app'
+import { STATUS_STYLE } from './schedule-constants'
 
-const STATUS_STYLE: Partial<Record<DraftStatus, string>> = {
-  scheduled: 'bg-blue-100 text-blue-800 border-blue-200',
-  posted:    'bg-secondary text-secondary-foreground border-transparent',
-  failed:    'bg-destructive text-destructive-foreground border-transparent',
-}
+const MAX_VISIBLE = 2
 
 interface Props {
   date: Date
@@ -18,7 +15,6 @@ interface Props {
 }
 
 export function CalendarDayCell({ date, drafts, isCurrentMonth, isToday, onDraftClick }: Props) {
-  const MAX_VISIBLE = 2
   const visible = drafts.slice(0, MAX_VISIBLE)
   const overflow = drafts.length - MAX_VISIBLE
 

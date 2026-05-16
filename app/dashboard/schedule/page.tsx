@@ -251,7 +251,7 @@ export default function SchedulePage() {
                           <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() => handleCancel(String(post.id))}
+                            onClick={() => handleCancel(post.id)}
                             aria-label={`スケジュールキャンセル: ${postScheduledAt ? formatJST(postScheduledAt) : ''}`}
                           >
                             キャンセル
