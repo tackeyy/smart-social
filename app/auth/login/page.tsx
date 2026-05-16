@@ -39,19 +39,28 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* ロゴ */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-[6px] bg-manavi-primary mb-4">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              className="w-6 h-6 text-white"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M7 8h10M7 12h10m-7 4h7"
-              />
+          <div className="inline-flex items-center justify-center w-12 h-12 mb-4">
+            <svg viewBox="0 0 512 512" className="w-12 h-12">
+              <defs>
+                <linearGradient id="ss-login" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="#0083FF"/>
+                  <stop offset="100%" stopColor="#00B4D8"/>
+                </linearGradient>
+              </defs>
+              <rect width="512" height="512" rx="112" fill="url(#ss-login)"/>
+              <line x1="256" y1="256" x2="256" y2="122" stroke="white" strokeWidth="8" opacity="0.5" strokeLinecap="round"/>
+              <line x1="256" y1="256" x2="372" y2="189" stroke="white" strokeWidth="8" opacity="0.5" strokeLinecap="round"/>
+              <line x1="256" y1="256" x2="372" y2="323" stroke="white" strokeWidth="8" opacity="0.5" strokeLinecap="round"/>
+              <line x1="256" y1="256" x2="256" y2="390" stroke="white" strokeWidth="8" opacity="0.5" strokeLinecap="round"/>
+              <line x1="256" y1="256" x2="140" y2="323" stroke="white" strokeWidth="8" opacity="0.5" strokeLinecap="round"/>
+              <line x1="256" y1="256" x2="140" y2="189" stroke="white" strokeWidth="8" opacity="0.5" strokeLinecap="round"/>
+              <circle cx="256" cy="110" r="20" fill="white" opacity="0.8"/>
+              <circle cx="384" cy="178" r="20" fill="white" opacity="0.8"/>
+              <circle cx="384" cy="334" r="20" fill="white" opacity="0.8"/>
+              <circle cx="256" cy="402" r="20" fill="white" opacity="0.8"/>
+              <circle cx="128" cy="334" r="20" fill="white" opacity="0.8"/>
+              <circle cx="128" cy="178" r="20" fill="white" opacity="0.8"/>
+              <path d="M256 190 L270 244 L324 256 L270 268 L256 322 L242 268 L188 256 L242 244 Z" fill="white"/>
             </svg>
           </div>
           <h1 className="text-2xl font-semibold tracking-[-0.02em] text-manavi-navy">
