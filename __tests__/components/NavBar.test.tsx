@@ -19,11 +19,12 @@ describe('NavBar', () => {
     expect(screen.getByText('Smart Social')).toBeTruthy()
   })
 
-  it('全7ナビリンクが存在する', () => {
+  it('全8ナビリンクが存在する', () => {
     render(React.createElement(NavBar))
     expect(screen.getAllByRole('link', { name: 'ダッシュボード' }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: 'ドラフト' }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: 'タイムライン' }).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('link', { name: 'メンション' }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: 'スケジュール' }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: '分析' }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: 'アカウント' }).length).toBeGreaterThan(0)

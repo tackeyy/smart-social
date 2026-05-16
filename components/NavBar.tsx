@@ -9,6 +9,7 @@ const navLinks = [
   { href: '/dashboard', label: 'ダッシュボード' },
   { href: '/dashboard/drafts', label: 'ドラフト' },
   { href: '/dashboard/timeline', label: 'タイムライン' },
+  { href: '/dashboard/mentions', label: 'メンション' },
   { href: '/dashboard/schedule', label: 'スケジュール' },
   { href: '/dashboard/analytics', label: '分析' },
   { href: '/dashboard/accounts', label: 'アカウント' },
