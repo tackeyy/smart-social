@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { CalendarDayCell } from './CalendarDayCell'
 import { DraftDetailDialog } from './DraftDetailDialog'
-import { buildCalendarGrid, groupByDate } from './calendar-utils'
+import { buildCalendarGrid, groupByDate, toJSTDateKey } from './calendar-utils'
 import type { Draft } from '@/types/app'
 
 const WEEKDAY_LABELS = ['日', '月', '火', '水', '木', '金', '土']
@@ -15,7 +15,7 @@ interface Props {
 }
 
 export function ScheduleCalendarView({ posts, onCancel }: Props) {
-  const today = new Date()
+  const [today] = useState(() => new Date())
   const [currentYear, setCurrentYear] = useState(today.getFullYear())
   const [currentMonth, setCurrentMonth] = useState(today.getMonth())
   const [selectedDraft, setSelectedDraft] = useState<Draft | null>(null)
@@ -29,19 +29,6 @@ export function ScheduleCalendarView({ posts, onCancel }: Props) {
     () => groupByDate(posts, currentYear, currentMonth),
     [posts, currentYear, currentMonth]
   )
-
-  function toDateKey(date: Date): string {
-    const y = date.getFullYear()
-    const m = String(date.getMonth() + 1).padStart(2, '0')
-    const d = String(date.getDate()).padStart(2, '0')
-    return `${y}-${m}-${d}`
-  }
-
-  function isSameDay(a: Date, b: Date): boolean {
-    return a.getFullYear() === b.getFullYear()
-      && a.getMonth() === b.getMonth()
-      && a.getDate() === b.getDate()
-  }
 
   function goPrevMonth() {
     if (currentMonth === 0) {
@@ -94,9 +81,9 @@ export function ScheduleCalendarView({ posts, onCancel }: Props) {
               <CalendarDayCell
                 key={`${wi}-${di}`}
                 date={date}
-                drafts={dateMap.get(toDateKey(date)) ?? []}
+                drafts={dateMap.get(toJSTDateKey(date.toISOString())) ?? []}
                 isCurrentMonth={date.getMonth() === currentMonth}
-                isToday={isSameDay(date, today)}
+                isToday={toJSTDateKey(date.toISOString()) === toJSTDateKey(today.toISOString())}
                 onDraftClick={setSelectedDraft}
               />
             ))}

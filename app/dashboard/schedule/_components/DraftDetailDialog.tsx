@@ -10,23 +10,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { Draft } from '@/types/app'
-
-const STATUS_LABEL: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  scheduled: { label: '待機中', variant: 'secondary' },
-  posted:    { label: '投稿済み', variant: 'default' },
-  failed:    { label: '失敗', variant: 'destructive' },
-}
-
-function formatJST(isoString: string): string {
-  return new Date(isoString).toLocaleString('ja-JP', {
-    timeZone: 'Asia/Tokyo',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
+import { STATUS_LABEL, formatJST } from './schedule-constants'
 
 interface Props {
   draft: Draft | null

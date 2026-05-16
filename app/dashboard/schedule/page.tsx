@@ -18,25 +18,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { Draft } from '@/types/app'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ScheduleCalendarView } from './_components/ScheduleCalendarView'
-
-const STATUS_LABEL: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  scheduled: { label: '待機中', variant: 'secondary' },
-  posted:    { label: '投稿済み', variant: 'default' },
-  failed:    { label: '失敗', variant: 'destructive' },
-}
+import { STATUS_LABEL, formatJST } from './_components/schedule-constants'
 
 const MAX_CHARS = 280
-
-function formatJST(isoString: string): string {
-  return new Date(isoString).toLocaleString('ja-JP', {
-    timeZone: 'Asia/Tokyo',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
 
 // datetime-local の min 値用に JST の現在時刻を返す（Intl.DateTimeFormat でタイムゾーン安全に計算）
 function getJSTNow(): string {
@@ -161,7 +145,7 @@ export default function SchedulePage() {
                 required
               />
               <span
-                className={`text-xs ${isOverLimit ? 'text-red-500 font-medium' : 'text-gray-400'}`}
+                className={`text-xs ${isOverLimit ? 'text-red-500 font-medium' : 'text-manavi-muted'}`}
                 aria-live="polite"
               >
                 {charCount} / {MAX_CHARS}
@@ -169,7 +153,7 @@ export default function SchedulePage() {
             </div>
 
             <div className="space-y-1">
-              <label htmlFor="scheduled-at" className="text-sm font-medium text-gray-700">
+              <label htmlFor="scheduled-at" className="text-sm font-medium text-manavi-navy-light">
                 投稿日時（日本時間）
               </label>
               <Input
@@ -234,7 +218,7 @@ export default function SchedulePage() {
             ))}
           </div>
         ) : posts.length === 0 ? (
-          <p className="text-gray-400 text-sm py-8 text-center" aria-live="polite">スケジュールはありません</p>
+          <p className="text-manavi-muted text-sm py-8 text-center" aria-live="polite">スケジュールはありません</p>
         ) : (
           <div className="rounded-md border overflow-x-auto">
             <Table>

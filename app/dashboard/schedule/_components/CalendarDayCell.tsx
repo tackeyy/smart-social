@@ -1,9 +1,9 @@
 'use client'
 
 import { Badge } from '@/components/ui/badge'
-import type { Draft } from '@/types/app'
+import type { Draft, DraftStatus } from '@/types/app'
 
-const STATUS_STYLE: Record<string, string> = {
+const STATUS_STYLE: Partial<Record<DraftStatus, string>> = {
   scheduled: 'bg-blue-100 text-blue-800 border-blue-200',
   posted:    'bg-secondary text-secondary-foreground border-transparent',
   failed:    'bg-destructive text-destructive-foreground border-transparent',
@@ -47,6 +47,7 @@ export function CalendarDayCell({ date, drafts, isCurrentMonth, isToday, onDraft
       {visible.map((draft) => (
         <button
           key={draft.id}
+          aria-label={`${draft.content}（${draft.status}）`}
           onClick={() => onDraftClick(draft)}
           className={[
             'w-full text-left rounded px-1 py-0.5 text-[10px] leading-snug truncate border',
