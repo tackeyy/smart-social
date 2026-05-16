@@ -57,7 +57,6 @@ describe('GET /api/accounts', () => {
         user_id: 'user-1',
         x_user_id: '123456789',
         screen_name: 'testuser',
-        display_name: 'Test User',
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z',
       },
@@ -66,7 +65,6 @@ describe('GET /api/accounts', () => {
         user_id: 'user-1',
         x_user_id: '987654321',
         screen_name: 'testuser2',
-        display_name: 'Test User 2',
         created_at: '2024-01-02T00:00:00Z',
         updated_at: '2024-01-02T00:00:00Z',
       },
@@ -137,8 +135,7 @@ describe('POST /api/accounts', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        x_username: 'testuser',
-        display_name: 'Test User',
+        screen_name: 'testuser',
         x_user_id: '123456789',
       }),
     })
@@ -153,7 +150,7 @@ describe('POST /api/accounts', () => {
     )
   })
 
-  it('x_username が欠損している場合は400を返す', async () => {
+  it('screen_name が欠損している場合は400を返す', async () => {
     // Arrange
     mockCreateClient.mockResolvedValue({
       auth: {
@@ -169,40 +166,7 @@ describe('POST /api/accounts', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        // x_username なし
-        display_name: 'Test User',
-        x_user_id: '123456789',
-      }),
-    })
-
-    // Act
-    await POST(request)
-
-    // Assert
-    expect(mockNextResponseJson).toHaveBeenCalledWith(
-      { error: expect.any(String) },
-      { status: 400 }
-    )
-  })
-
-  it('display_name が欠損している場合は400を返す', async () => {
-    // Arrange
-    mockCreateClient.mockResolvedValue({
-      auth: {
-        getUser: vi.fn().mockResolvedValue({
-          data: { user: { id: 'user-1' } },
-          error: null,
-        }),
-      },
-      from: vi.fn(),
-    } as any)
-
-    const request = new Request('http://localhost/api/accounts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        x_username: 'testuser',
-        // display_name なし
+        // screen_name なし
         x_user_id: '123456789',
       }),
     })
@@ -233,8 +197,7 @@ describe('POST /api/accounts', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        x_username: 'testuser',
-        display_name: 'Test User',
+        screen_name: 'testuser',
         // x_user_id なし
       }),
     })
@@ -265,8 +228,7 @@ describe('POST /api/accounts', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        x_username: 'testuser',
-        display_name: 'Test User',
+        screen_name: 'testuser',
         x_user_id: 'not-a-number',
       }),
     })
@@ -281,7 +243,7 @@ describe('POST /api/accounts', () => {
     )
   })
 
-  it('x_username に使用禁止文字（@）が含まれる場合は400を返す', async () => {
+  it('screen_name に使用禁止文字（@）が含まれる場合は400を返す', async () => {
     // Arrange
     mockCreateClient.mockResolvedValue({
       auth: {
@@ -297,8 +259,7 @@ describe('POST /api/accounts', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        x_username: '@invalid_user',
-        display_name: 'Test User',
+        screen_name: '@invalid_user',
         x_user_id: '123456789',
       }),
     })
@@ -308,12 +269,12 @@ describe('POST /api/accounts', () => {
 
     // Assert
     expect(mockNextResponseJson).toHaveBeenCalledWith(
-      { error: 'x_username must be alphanumeric and underscores only (max 50 chars)' },
+      { error: 'screen_name must be alphanumeric and underscores only (max 50 chars)' },
       { status: 400 }
     )
   })
 
-  it('x_username が51文字以上の場合は400を返す', async () => {
+  it('screen_name が51文字以上の場合は400を返す', async () => {
     // Arrange
     mockCreateClient.mockResolvedValue({
       auth: {
@@ -329,8 +290,7 @@ describe('POST /api/accounts', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        x_username: 'a'.repeat(51),
-        display_name: 'Test User',
+        screen_name: 'a'.repeat(51),
         x_user_id: '123456789',
       }),
     })
@@ -340,7 +300,7 @@ describe('POST /api/accounts', () => {
 
     // Assert
     expect(mockNextResponseJson).toHaveBeenCalledWith(
-      { error: 'x_username must be alphanumeric and underscores only (max 50 chars)' },
+      { error: 'screen_name must be alphanumeric and underscores only (max 50 chars)' },
       { status: 400 }
     )
   })
@@ -352,7 +312,6 @@ describe('POST /api/accounts', () => {
       user_id: 'user-1',
       x_user_id: '123456789',
       screen_name: 'testuser',
-      display_name: 'Test User',
       created_at: '2024-01-01T00:00:00Z',
       updated_at: '2024-01-01T00:00:00Z',
     }
@@ -375,8 +334,7 @@ describe('POST /api/accounts', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        x_username: 'testuser',
-        display_name: 'Test User',
+        screen_name: 'testuser',
         x_user_id: '123456789',
       }),
     })
