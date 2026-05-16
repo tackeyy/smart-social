@@ -19,10 +19,11 @@ describe('NavBar', () => {
     expect(screen.getByText('Smart Social')).toBeTruthy()
   })
 
-  it('全6ナビリンクが存在する', () => {
+  it('全7ナビリンクが存在する', () => {
     render(React.createElement(NavBar))
     expect(screen.getAllByRole('link', { name: 'ダッシュボード' }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: 'ドラフト' }).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('link', { name: 'タイムライン' }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: 'スケジュール' }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: '分析' }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: 'アカウント' }).length).toBeGreaterThan(0)
@@ -53,5 +54,32 @@ describe('NavBar', () => {
     fireEvent.click(button)
     fireEvent.click(button)
     expect(button.getAttribute('aria-expanded')).toBe('false')
+  })
+
+  describe('aria-current の ARIA統合テスト', () => {
+    it('現在のパスに対応するリンクに aria-current="page" が設定される', () => {
+      render(React.createElement(NavBar))
+      // usePathname は '/dashboard' を返すようにモック済み
+      const links = screen.getAllByRole('link', { name: 'ダッシュボード' })
+      const activeLink = links.find(el => el.getAttribute('aria-current') === 'page')
+      expect(activeLink).toBeTruthy()
+    })
+
+    it('現在のパス以外のリンクには aria-current が設定されない', () => {
+      render(React.createElement(NavBar))
+      const links = screen.getAllByRole('link', { name: 'ドラフト' })
+      links.forEach(el => {
+        expect(el.getAttribute('aria-current')).toBeNull()
+      })
+    })
+
+    it('モバイルメニューのリンクにも aria-current が設定される', () => {
+      render(React.createElement(NavBar))
+      const button = screen.getByRole('button', { name: /メニュー/ })
+      fireEvent.click(button)
+      const links = screen.getAllByRole('link', { name: 'ダッシュボード' })
+      const activeLinks = links.filter(el => el.getAttribute('aria-current') === 'page')
+      expect(activeLinks.length).toBeGreaterThan(0)
+    })
   })
 })
