@@ -57,3 +57,31 @@ CREATE POLICY "members_can_view_team_members" ON team_members
   FOR SELECT USING (
     team_id IN (SELECT team_id FROM team_members WHERE user_id = auth.uid())
   );
+
+-- team_members INSERT: owner/admin のみ
+CREATE POLICY "owner_admin_can_insert_team_members" ON team_members
+  FOR INSERT WITH CHECK (
+    team_id IN (
+      SELECT team_id FROM team_members
+      WHERE user_id = auth.uid() AND role IN ('owner', 'admin')
+    )
+  );
+
+-- team_members UPDATE: owner のみ
+CREATE POLICY "owner_can_update_team_members" ON team_members
+  FOR UPDATE USING (
+    team_id IN (
+      SELECT team_id FROM team_members
+      WHERE user_id = auth.uid() AND role = 'owner'
+    )
+  );
+
+-- team_members DELETE: 自分自身 OR owner/admin
+CREATE POLICY "can_delete_team_members" ON team_members
+  FOR DELETE USING (
+    user_id = auth.uid()
+    OR team_id IN (
+      SELECT team_id FROM team_members
+      WHERE user_id = auth.uid() AND role IN ('owner', 'admin')
+    )
+  );
