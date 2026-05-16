@@ -1,6 +1,6 @@
 [English](README.md) | **日本語**
 
-# smart-sns
+# smart-social
 
 > X（Twitter）運用を自動化するAI駆動の投稿管理ツール
 
@@ -11,7 +11,7 @@
 ## クイックスタート
 
 ```bash
-npm install -g smart-sns
+npm install -g smart-social
 ```
 
 ## 使い方
@@ -27,8 +27,8 @@ npm install -g smart-sns
 コントリビューションを歓迎します。変更を加える前に、まず Issue を作成して議論してください。
 
 ```bash
-git clone https://github.com/tackeyy/smart-sns.git
-cd smart-sns
+git clone https://github.com/tackeyy/smart-social.git
+cd smart-social
 ```
 
 ## ライセンス

@@ -1,11 +1,11 @@
-# Contributing to smart-sns
+# Contributing to smart-social
 
-Thank you for your interest in contributing to smart-sns! This document provides guidelines and
+Thank you for your interest in contributing to smart-social! This document provides guidelines and
 instructions for contributing to the project.
 
 ## 🙏 Welcome!
 
-smart-sns is a Node.js/TypeScript project. We welcome contributions from everyone, whether
+smart-social is a Node.js/TypeScript project. We welcome contributions from everyone, whether
 you're fixing a bug, adding a feature, improving tests, or improving documentation.
 
 ## 📖 Table of Contents
@@ -28,7 +28,7 @@ you're fixing a bug, adding a feature, improving tests, or improving documentati
 - 💡 **Suggesting features** - Have an idea? We'd love to hear it
 - 📝 **Improving documentation** - Help make our docs clearer
 - 🔧 **Submitting bug fixes** - Fix issues and help improve stability
-- ✨ **Adding new features** - Expand smart-sns's capabilities (discuss first!)
+- ✨ **Adding new features** - Expand smart-social's capabilities (discuss first!)
 
 ## 🎯 Before You Start
 
@@ -48,8 +48,8 @@ you're fixing a bug, adding a feature, improving tests, or improving documentati
 
 ```bash
 # 1. Fork and clone the repository
-git clone https://github.com/YOUR_USERNAME/smart-sns.git
-cd smart-sns
+git clone https://github.com/YOUR_USERNAME/smart-social.git
+cd smart-social
 
 # 2. Install dependencies
 npm install
@@ -238,10 +238,10 @@ Reviewers will check:
 
 ## 📬 Getting Help
 
-- 💬 **Questions** - Open a [GitHub Discussion](https://github.com/tackeyy/smart-sns/discussions)
-- 🐛 **Bug Reports** - Open an [Issue](https://github.com/tackeyy/smart-sns/issues/new?template=bug_report.yml)
-- 💡 **Feature Requests** - Open an [Issue](https://github.com/tackeyy/smart-sns/issues/new?template=feature_request.yml)
-- ❓ **General Questions** - Open an [Issue](https://github.com/tackeyy/smart-sns/issues/new?template=question.yml)
+- 💬 **Questions** - Open a [GitHub Discussion](https://github.com/tackeyy/smart-social/discussions)
+- 🐛 **Bug Reports** - Open an [Issue](https://github.com/tackeyy/smart-social/issues/new?template=bug_report.yml)
+- 💡 **Feature Requests** - Open an [Issue](https://github.com/tackeyy/smart-social/issues/new?template=feature_request.yml)
+- ❓ **General Questions** - Open an [Issue](https://github.com/tackeyy/smart-social/issues/new?template=question.yml)
 
 ## 🙌 Recognition
 
@@ -253,4 +253,4 @@ All contributors are recognized in:
 
 ---
 
-Thank you for contributing to smart-sns! Your efforts help make this project better for everyone.
+Thank you for contributing to smart-social! Your efforts help make this project better for everyone.

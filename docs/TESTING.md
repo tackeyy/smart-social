@@ -2,7 +2,7 @@
 
 ## Overview
 
-smart-sns uses [Vitest](https://vitest.dev/) as its testing framework.
+smart-social uses [Vitest](https://vitest.dev/) as its testing framework.
 All code contributions must include comprehensive tests.
 
 ## Test Philosophy
@@ -335,5 +335,5 @@ const { myFunction } = await import("../myModule.js");
 
 If you have questions about testing:
 1. Check existing test files for examples
-2. Ask in [GitHub Discussions](https://github.com/tackeyy/smart-sns/discussions)
+2. Ask in [GitHub Discussions](https://github.com/tackeyy/smart-social/discussions)
 3. Open an issue with the `question` label

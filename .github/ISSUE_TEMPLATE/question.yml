@@ -1,5 +1,5 @@
 name: ❓ Question
-description: Ask a question about using smart-sns
+description: Ask a question about using smart-social
 labels: ["question"]
 body:
   - type: markdown
@@ -11,7 +11,7 @@ body:
     id: question
     attributes:
       label: Your question
-      description: What would you like to know about smart-sns?
+      description: What would you like to know about smart-social?
       placeholder: |
         How do I configure this project?
         What usage pattern do you recommend for...?

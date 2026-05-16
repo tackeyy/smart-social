@@ -13,7 +13,7 @@ body:
       label: Describe the bug
       description: A clear and concise description of what the bug is
       placeholder: |
-        When I run `smart-sns --help`, I get an error...
+        When I run `smart-social --help`, I get an error...
     validations:
       required: true
 
@@ -23,7 +23,7 @@ body:
       label: Steps to reproduce
       description: Steps to reproduce the behavior
       placeholder: |
-        1. Run `smart-sns --help`
+        1. Run `smart-social --help`
         2. Observe error message
         3. ...
     validations:
@@ -51,8 +51,8 @@ body:
   - type: input
     id: project_version
     attributes:
-      label: "smart-sns version"
-      description: Run `smart-sns --version` or check your installed package/version
+      label: "smart-social version"
+      description: Run `smart-social --version` or check your installed package/version
       placeholder: "1.0.0"
     validations:
       required: true
