@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     timingSafeEqual(Buffer.from(incoming), Buffer.from(secret))
 
   if (!isValid) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
   }
 
   const supabase = createClient(
@@ -37,7 +37,7 @@ export async function GET(request: Request) {
 
   if (error) {
     console.error('Cron scheduler error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 })
   }
 
   const results: Array<{ id: string; status: string }> = []

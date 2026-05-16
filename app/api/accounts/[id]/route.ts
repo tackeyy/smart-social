@@ -10,7 +10,7 @@ export async function DELETE(
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
   }
 
   const { data, error } = await supabase
@@ -22,15 +22,15 @@ export async function DELETE(
     .single()
 
   if (error?.code === 'PGRST116') {
-    return NextResponse.json({ error: 'Not Found' }, { status: 404 })
+    return NextResponse.json({ error: '見つかりません' }, { status: 404 })
   }
 
   if (error) {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 })
   }
 
   if (!data) {
-    return NextResponse.json({ error: 'Not Found' }, { status: 404 })
+    return NextResponse.json({ error: '見つかりません' }, { status: 404 })
   }
 
   return NextResponse.json(data, { status: 200 })

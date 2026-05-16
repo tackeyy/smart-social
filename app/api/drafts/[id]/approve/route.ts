@@ -11,7 +11,7 @@ export async function POST(
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
   }
 
   // reply_drafts は x_account_id 経由でユーザーに紐づくため、
@@ -45,26 +45,26 @@ export async function POST(
       .single()
 
     if (fetchError?.code === 'PGRST116' || !existing) {
-      return NextResponse.json({ error: 'Not Found' }, { status: 404 })
+      return NextResponse.json({ error: '見つかりません' }, { status: 404 })
     }
 
     if (fetchError) {
       // M-1: fetchError.message を外部に露出しない
       console.error('DB fetch error:', { draftId: id, error: fetchError })
-      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+      return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 })
     }
 
     if (existing.status === 'posted') {
-      return NextResponse.json({ error: 'Already posted' }, { status: 409 })
+      return NextResponse.json({ error: 'すでに投稿済みです' }, { status: 409 })
     }
 
     // processing / rejected など
-    return NextResponse.json({ error: 'Already processing or not in pending state' }, { status: 409 })
+    return NextResponse.json({ error: '処理中またはペンディング状態ではありません' }, { status: 409 })
   }
 
   if (claimError) {
     console.error('DB claim error:', { draftId: id, error: claimError })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 })
   }
 
   try {

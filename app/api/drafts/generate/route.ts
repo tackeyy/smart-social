@@ -7,7 +7,7 @@ export async function POST(request: Request) {
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
   }
 
   let body: {
@@ -19,11 +19,11 @@ export async function POST(request: Request) {
   try {
     body = await request.json()
   } catch {
-    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+    return NextResponse.json({ error: 'リクエストの形式が不正です' }, { status: 400 })
   }
 
   if (!body.x_account_id || !body.source_tweet_url) {
-    return NextResponse.json({ error: 'x_account_id and source_tweet_url are required' }, { status: 400 })
+    return NextResponse.json({ error: 'アカウントIDとツイートURLは必須です' }, { status: 400 })
   }
 
   // x_account_id の所有権確認
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     .single()
 
   if (accountError || !account) {
-    return NextResponse.json({ error: 'X account not found or access denied' }, { status: 403 })
+    return NextResponse.json({ error: 'Xアカウントが見つからないか、アクセス権限がありません' }, { status: 403 })
   }
 
   // style_profiles から最新プロファイル取得

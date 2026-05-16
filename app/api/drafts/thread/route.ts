@@ -12,20 +12,20 @@ export async function POST(request: Request) {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
   }
 
   let body: { x_account_id: number; tweets: string[] }
   try {
     body = await request.json()
   } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+    return NextResponse.json({ error: 'リクエストの形式が不正です' }, { status: 400 })
   }
 
   const { x_account_id, tweets } = body
 
   if (!x_account_id || typeof x_account_id !== 'number') {
-    return NextResponse.json({ error: 'x_account_id is required' }, { status: 400 })
+    return NextResponse.json({ error: 'アカウントIDは必須です' }, { status: 400 })
   }
 
   if (!Array.isArray(tweets) || tweets.length < MIN_TWEETS || tweets.length > MAX_TWEETS) {
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     .single()
 
   if (!account) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    return NextResponse.json({ error: 'アクセス権限がありません' }, { status: 403 })
   }
 
   try {

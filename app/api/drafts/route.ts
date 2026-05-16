@@ -6,7 +6,7 @@ export async function GET(request: Request) {
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
   }
 
   // reply_drafts は x_account_id 経由でユーザーに紐づくため、
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
   }
 
   const body = await request.json()
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     .single()
 
   if (!account) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    return NextResponse.json({ error: 'アクセス権限がありません' }, { status: 403 })
   }
 
   const { data, error } = await supabase

@@ -5,12 +5,12 @@ export async function POST(request: Request) {
   const { email } = await request.json()
 
   if (!email) {
-    return NextResponse.json({ error: 'email is required' }, { status: 400 })
+    return NextResponse.json({ error: 'メールアドレスを入力してください' }, { status: 400 })
   }
 
   const allowedEmail = process.env.ALLOWED_EMAIL
   if (allowedEmail && email !== allowedEmail) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    return NextResponse.json({ error: '認証が必要です' }, { status: 403 })
   }
 
   const origin = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin

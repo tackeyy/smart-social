@@ -10,7 +10,7 @@ export async function GET(_request: Request) {
     requestToken = await getRequestToken(callbackUrl)
   } catch (error) {
     console.error('[GET /api/auth/x/initiate] getRequestToken failed:', error)
-    return NextResponse.json({ error: 'Failed to initiate X OAuth' }, { status: 500 })
+    return NextResponse.json({ error: 'X認証の開始に失敗しました' }, { status: 500 })
   }
 
   const authorizationUrl = buildAuthorizationUrl(requestToken.oauth_token)

@@ -9,14 +9,14 @@ export async function GET(request: Request) {
   const oauthVerifier = searchParams.get('oauth_verifier')
 
   if (!oauthToken || !oauthVerifier) {
-    return NextResponse.json({ error: 'Missing oauth_token or oauth_verifier' }, { status: 400 })
+    return NextResponse.json({ error: '認証トークンが不足しています' }, { status: 400 })
   }
 
   const cookieStore = await cookies()
   const requestTokenSecret = cookieStore.get('x_oauth_request_secret')?.value
 
   if (!requestTokenSecret) {
-    return NextResponse.json({ error: 'Missing request token secret' }, { status: 400 })
+    return NextResponse.json({ error: 'リクエストトークンが見つかりません' }, { status: 400 })
   }
 
   let accessTokenData: { access_token: string; access_token_secret: string; user_id: string; screen_name: string }
@@ -24,14 +24,14 @@ export async function GET(request: Request) {
     accessTokenData = await getAccessToken(oauthToken, oauthVerifier, requestTokenSecret)
   } catch (error) {
     console.error('[GET /api/auth/x/callback] getAccessToken failed:', error)
-    return NextResponse.json({ error: 'Failed to get access token' }, { status: 500 })
+    return NextResponse.json({ error: 'アクセストークンの取得に失敗しました' }, { status: 500 })
   }
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
   }
 
   const { error: upsertError } = await supabase
@@ -50,7 +50,7 @@ export async function GET(request: Request) {
 
   if (upsertError) {
     console.error('[GET /api/auth/x/callback] upsert failed:', upsertError)
-    return NextResponse.json({ error: 'Failed to save account' }, { status: 500 })
+    return NextResponse.json({ error: 'アカウントの保存に失敗しました' }, { status: 500 })
   }
 
   const response = NextResponse.redirect(

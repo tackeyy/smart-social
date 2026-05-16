@@ -8,7 +8,7 @@ export async function GET(request: Request) {
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
   }
 
   const url = new URL(request.url)
