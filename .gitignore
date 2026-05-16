@@ -54,3 +54,6 @@ supabase/.temp
 
 # Claude Code
 .claude/
+
+# playwright-cli logs
+.playwright-cli/
