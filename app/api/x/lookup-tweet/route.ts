@@ -1,9 +1,16 @@
+import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 const X_API_BASE = 'https://api.x.com/2'
 const TWEET_URL_PATTERN = /^https?:\/\/(?:x|twitter)\.com\/\S+\/status\/(\d+)/
 
 export async function GET(request: Request) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
+  }
+
   const { searchParams } = new URL(request.url)
   const tweetUrl = searchParams.get('url')
 

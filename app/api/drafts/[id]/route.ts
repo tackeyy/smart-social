@@ -17,6 +17,7 @@ export async function GET(
     .from('drafts')
     .select('*')
     .eq('id', id)
+    .eq('user_id', user.id)
     .single()
 
   if (error) {
@@ -40,10 +41,21 @@ export async function PATCH(
 
   const body = await request.json()
 
+  const PATCHABLE_FIELDS = ['content', 'selected_index'] as const
+  const allowedFields = Object.fromEntries(
+    PATCHABLE_FIELDS
+      .filter(k => body[k] !== undefined)
+      .map(k => [k, body[k]])
+  )
+  if (Object.keys(allowedFields).length === 0) {
+    return NextResponse.json({ error: '更新可能なフィールドがありません' }, { status: 400 })
+  }
+
   const { data, error } = await supabase
     .from('drafts')
-    .update(body)
+    .update(allowedFields)
     .eq('id', id)
+    .eq('user_id', user.id)
     .select()
     .single()
 
@@ -66,7 +78,11 @@ export async function DELETE(
     return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
   }
 
-  const { error } = await supabase.from('drafts').delete().eq('id', id)
+  const { error } = await supabase
+    .from('drafts')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', user.id)
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })

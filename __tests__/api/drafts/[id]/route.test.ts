@@ -168,6 +168,29 @@ describe('PATCH /api/drafts/[id]', () => {
       { status: 500 }
     )
   })
+
+  it('更新可能なフィールドがない場合は400を返す', async () => {
+    mockCreateClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1' } },
+          error: null,
+        }),
+      },
+      from: vi.fn(),
+    } as any)
+
+    const request = new Request('http://localhost/api/drafts/draft-1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: 'attacker', status: 'posted' }),
+    })
+    await PATCH(request, makeParams('draft-1'))
+    expect(mockNextResponseJson).toHaveBeenCalledWith(
+      { error: '更新可能なフィールドがありません' },
+      { status: 400 }
+    )
+  })
 })
 
 describe('DELETE /api/drafts/[id]', () => {
@@ -195,7 +218,29 @@ describe('DELETE /api/drafts/[id]', () => {
       },
       from: vi.fn().mockReturnValue({
         delete: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ error: null }),
+        eq: vi.fn().mockReturnThis(),
+        // チェーンの最後（.eq('user_id', ...) の後）は Promise を返す
+      }),
+    } as any)
+
+    // 2つ目の eq が await 対象になるので、mockReturnThis() では不十分
+    // eq チェーンが2回呼ばれ、最後の eq が { error: null } を返す必要がある
+    const mockEq = vi.fn()
+    mockEq
+      .mockReturnValueOnce({ eq: vi.fn().mockResolvedValue({ error: null }) })
+    mockCreateClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1' } },
+          error: null,
+        }),
+      },
+      from: vi.fn().mockReturnValue({
+        delete: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({ error: null }),
+          }),
+        }),
       }),
     } as any)
 
@@ -213,8 +258,11 @@ describe('DELETE /api/drafts/[id]', () => {
         }),
       },
       from: vi.fn().mockReturnValue({
-        delete: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ error: { message: 'db error' } }),
+        delete: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({ error: { message: 'db error' } }),
+          }),
+        }),
       }),
     } as any)
 

@@ -60,7 +60,11 @@ export async function POST(
   }
 
   try {
-    const tweet = await postTweet({ text: claimed.content })
+    const replyToId = claimed.type === 'reply' && claimed.source_tweet_id
+      ? claimed.source_tweet_id
+      : undefined
+
+    const tweet = await postTweet({ text: claimed.content, replyToId })
 
     const { data: updated, error: updateError } = await supabase
       .from('drafts')

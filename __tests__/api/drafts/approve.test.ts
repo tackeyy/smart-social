@@ -205,9 +205,64 @@ describe('POST /api/drafts/[id]/approve', () => {
     await POST(request, makeParams('draft-1'))
 
     // Assert
-    expect(mockPostTweet).toHaveBeenCalledWith({ text: 'Hello' })
+    expect(mockPostTweet).toHaveBeenCalledWith({ text: 'Hello', replyToId: undefined })
     expect(mockNextResponseJson).toHaveBeenCalledWith(
       expect.objectContaining({ status: 'posted', posted_tweet_id: 'tweet-456' })
+    )
+  })
+
+  it('reply種別のドラフトは source_tweet_id を replyToId として渡す', async () => {
+    // Arrange
+    const replyDraft = {
+      id: 'draft-2',
+      content: 'Reply content',
+      status: 'pending',
+      type: 'reply',
+      source_tweet_id: 'original-tweet-id',
+    }
+    const updatedDraft = {
+      ...replyDraft,
+      status: 'posted',
+      posted_tweet_id: 'reply-tweet-id',
+    }
+    let selectCallCount = 0
+    const mockSingle = vi.fn().mockImplementation(() => {
+      selectCallCount++
+      if (selectCallCount === 1) return Promise.resolve({ data: replyDraft, error: null })
+      return Promise.resolve({ data: updatedDraft, error: null })
+    })
+    const mockDraftsBuilder = {
+      update: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: mockSingle,
+    }
+    mockCreateClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1' } },
+          error: null,
+        }),
+      },
+      from: vi.fn().mockReturnValue(mockDraftsBuilder),
+    } as any)
+
+    mockPostTweet.mockResolvedValue({ id: 'reply-tweet-id', text: 'Reply content' })
+
+    const request = new Request('http://localhost/api/drafts/draft-2/approve', {
+      method: 'POST',
+    })
+
+    // Act
+    await POST(request, makeParams('draft-2'))
+
+    // Assert: replyToId が渡されていること
+    expect(mockPostTweet).toHaveBeenCalledWith({
+      text: 'Reply content',
+      replyToId: 'original-tweet-id',
+    })
+    expect(mockNextResponseJson).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'posted', posted_tweet_id: 'reply-tweet-id' })
     )
   })
 

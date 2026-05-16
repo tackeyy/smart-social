@@ -20,9 +20,10 @@ export default async function DashboardPage() {
 
   const [{ count: scheduledToday }, { count: pendingDrafts }] = await Promise.all([
     supabase
-      .from('scheduled_posts')
+      .from('drafts')
       .select('*', { count: 'exact', head: true })
-      .eq('status', 'pending')
+      .eq('status', 'scheduled')
+      .in('type', ['original', 'thread'])
       .gte('scheduled_at', today.toISOString())
       .lt('scheduled_at', tomorrow.toISOString()),
     supabase
