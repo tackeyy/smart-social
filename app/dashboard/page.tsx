@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { GenerateProfileButton } from '@/components/GenerateProfileButton'
+import { MonitoringSection } from '@/components/MonitoringSection'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -18,7 +19,9 @@ export default async function DashboardPage() {
   const tomorrow = new Date(today)
   tomorrow.setDate(tomorrow.getDate() + 1)
 
-  const [{ count: scheduledToday }, { count: pendingDrafts }] = await Promise.all([
+  const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000)
+
+  const [{ count: scheduledToday }, { count: pendingDrafts }, { data: recentPosted }] = await Promise.all([
     supabase
       .from('drafts')
       .select('*', { count: 'exact', head: true })
@@ -30,6 +33,14 @@ export default async function DashboardPage() {
       .from('drafts')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'pending'),
+    supabase
+      .from('drafts')
+      .select('id, content, posted_at, posted_tweet_id, status')
+      .eq('status', 'posted')
+      .eq('user_id', user!.id)
+      .gte('posted_at', twoHoursAgo.toISOString())
+      .order('posted_at', { ascending: false })
+      .limit(5),
   ])
 
   const hasPending = (pendingDrafts ?? 0) > 0
@@ -85,6 +96,13 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* 初動モニタリング */}
+      {(recentPosted ?? []).length > 0 && (
+        <div className="mb-6">
+          <MonitoringSection initialDrafts={recentPosted ?? []} />
+        </div>
+      )}
 
       {/* ナビゲーションカード */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
