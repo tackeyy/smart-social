@@ -50,6 +50,28 @@ describe('DraftCard', () => {
     expect(header).toBeTruthy()
   })
 
+  describe('メディア添付UI', () => {
+    it('pending状態のカードに画像を添付ボタンが表示される', () => {
+      render(React.createElement(DraftCard, { draft: makeDraft(), onStatusChange: vi.fn() }))
+      expect(screen.getByLabelText(/画像を添付/)).toBeTruthy()
+    })
+
+    it('画像添付ボタンはimage/*のみ受け付けるファイル入力に紐付いている', () => {
+      render(React.createElement(DraftCard, { draft: makeDraft(), onStatusChange: vi.fn() }))
+      const input = screen.getByLabelText(/画像を添付/) as HTMLInputElement
+      expect(input.type).toBe('file')
+      expect(input.accept).toContain('image/')
+    })
+
+    it('pending以外のステータスでは画像を添付ボタンが表示されない', () => {
+      render(React.createElement(DraftCard, {
+        draft: makeDraft({ status: 'posted' }),
+        onStatusChange: vi.fn(),
+      }))
+      expect(screen.queryByLabelText(/画像を添付/)).toBeNull()
+    })
+  })
+
   describe('外部リンク警告バナー', () => {
     it('外部URLを含むコンテンツの場合は警告バナーが表示される', () => {
       render(React.createElement(DraftCard, {

@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { postTweet } from '@/lib/x/client'
 
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
@@ -59,12 +59,22 @@ export async function POST(
     return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 })
   }
 
+  let mediaIds: string[] | undefined
+  try {
+    const body = await request.json()
+    if (Array.isArray(body?.media_ids) && body.media_ids.length > 0) {
+      mediaIds = body.media_ids
+    }
+  } catch {
+    // body なし or 非JSON は無視
+  }
+
   try {
     const replyToId = claimed.type === 'reply' && claimed.source_tweet_id
       ? claimed.source_tweet_id
       : undefined
 
-    const tweet = await postTweet({ text: claimed.content, replyToId })
+    const tweet = await postTweet({ text: claimed.content, replyToId, ...(mediaIds ? { mediaIds } : {}) })
 
     const { data: updated, error: updateError } = await supabase
       .from('drafts')

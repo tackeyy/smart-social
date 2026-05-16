@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { toast } from 'sonner'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -30,9 +30,43 @@ export function DraftCard({ draft, onStatusChange }: DraftCardProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [warningDismissed, setWarningDismissed] = useState(false)
+  const [mediaId, setMediaId] = useState<string | null>(null)
+  const [mediaPreviewUrl, setMediaPreviewUrl] = useState<string | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const charCount = content.length
   const isOverLimit = charCount > MAX_CHARS
+
+  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const previewUrl = URL.createObjectURL(file)
+    setMediaPreviewUrl(previewUrl)
+    setIsUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch('/smart-social/api/media/upload', { method: 'POST', body: formData })
+      if (!res.ok) throw new Error('アップロード失敗')
+      const data = await res.json()
+      setMediaId(data.media_id_string)
+      toast.success('画像をアップロードしました')
+    } catch {
+      toast.error('画像のアップロードに失敗しました')
+      URL.revokeObjectURL(previewUrl)
+      setMediaPreviewUrl(null)
+    } finally {
+      setIsUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  function handleRemoveMedia() {
+    if (mediaPreviewUrl) URL.revokeObjectURL(mediaPreviewUrl)
+    setMediaId(null)
+    setMediaPreviewUrl(null)
+  }
 
   async function saveEdit() {
     if (content === draft.content) {
@@ -60,7 +94,6 @@ export function DraftCard({ draft, onStatusChange }: DraftCardProps) {
     if (isOverLimit) return
     setIsSubmitting(true)
     try {
-      // 編集済みの場合は先に保存してから承認
       if (content !== draft.content) {
         const saveRes = await fetch(`/smart-social/api/drafts/${draft.id}`, {
           method: 'PATCH',
@@ -72,6 +105,10 @@ export function DraftCard({ draft, onStatusChange }: DraftCardProps) {
 
       const res = await fetch(`/smart-social/api/drafts/${draft.id}/approve`, {
         method: 'POST',
+        ...(mediaId ? {
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ media_ids: [mediaId] }),
+        } : {}),
       })
       if (!res.ok) {
         const data = await res.json()
@@ -237,31 +274,71 @@ export function DraftCard({ draft, onStatusChange }: DraftCardProps) {
       </CardContent>
 
       {isActionable && !isEditing && (
-        <CardFooter className="flex gap-2 pt-0">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setIsEditing(true)}
-            disabled={isSubmitting}
-          >
-            編集
-          </Button>
-          <Button
-            size="sm"
-            variant="destructive"
-            onClick={handleReject}
-            disabled={isSubmitting}
-          >
-            却下
-          </Button>
-          <Button
-            size="sm"
-            onClick={handleApprove}
-            disabled={isSubmitting || isOverLimit}
-            className="ml-auto"
-          >
-            {isSubmitting ? '処理中...' : '承認して投稿'}
-          </Button>
+        <CardFooter className="flex flex-col gap-2 pt-0 items-start">
+          {/* メディアプレビュー */}
+          {mediaPreviewUrl && (
+            <div className="relative w-full">
+              <img
+                src={mediaPreviewUrl}
+                alt="添付画像プレビュー"
+                className="h-24 w-24 rounded-md object-cover border border-gray-200"
+              />
+              <button
+                onClick={handleRemoveMedia}
+                aria-label="添付画像を削除"
+                className="absolute -top-1.5 -right-1.5 left-auto rounded-full bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center leading-none"
+              >
+                ×
+              </button>
+            </div>
+          )}
+
+          <div className="flex gap-2 w-full">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setIsEditing(true)}
+              disabled={isSubmitting}
+            >
+              編集
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={handleReject}
+              disabled={isSubmitting}
+            >
+              却下
+            </Button>
+
+            {/* 画像添付 */}
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={isSubmitting || isUploading}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {isUploading ? 'アップロード中...' : '画像を添付'}
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/gif"
+              className="sr-only"
+              onChange={handleFileSelect}
+              disabled={isSubmitting || isUploading}
+              aria-label="画像を添付"
+            />
+
+            <Button
+              size="sm"
+              onClick={handleApprove}
+              disabled={isSubmitting || isOverLimit || isUploading}
+              className="ml-auto"
+            >
+              {isSubmitting ? '処理中...' : '承認して投稿'}
+            </Button>
+          </div>
         </CardFooter>
       )}
     </Card>

@@ -266,6 +266,44 @@ describe('POST /api/drafts/[id]/approve', () => {
     )
   })
 
+  it('media_idsが含まれる場合はpostTweetにmediaIdsとして渡される', async () => {
+    const pendingDraft = { id: 'draft-1', content: 'Hello', status: 'pending', type: 'original', source_tweet_id: null }
+    const updatedDraft = { ...pendingDraft, status: 'posted', posted_tweet_id: 'tweet-789' }
+    let singleCallCount = 0
+    const mockSingle = vi.fn().mockImplementation(() => {
+      singleCallCount++
+      if (singleCallCount === 1) return Promise.resolve({ data: pendingDraft, error: null })
+      return Promise.resolve({ data: updatedDraft, error: null })
+    })
+    const mockDraftsBuilder = {
+      update: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: mockSingle,
+    }
+    mockCreateClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null }),
+      },
+      from: vi.fn().mockReturnValue(mockDraftsBuilder),
+    } as any)
+    mockPostTweet.mockResolvedValue({ id: 'tweet-789', text: 'Hello' })
+
+    const request = new Request('http://localhost/api/drafts/draft-1/approve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ media_ids: ['media-abc123'] }),
+    })
+
+    await POST(request, makeParams('draft-1'))
+
+    expect(mockPostTweet).toHaveBeenCalledWith({
+      text: 'Hello',
+      replyToId: undefined,
+      mediaIds: ['media-abc123'],
+    })
+  })
+
   it('X API失敗時は422を返し、DBのstatusはpendingのまま', async () => {
     // Arrange
     const pendingDraft = { id: 'draft-1', content: 'Hello', status: 'pending' }
