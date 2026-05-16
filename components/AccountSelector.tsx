@@ -1,18 +1,24 @@
 'use client'
 
+import { useRouter, useSearchParams } from 'next/navigation'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import type { XAccount } from '@/types/app'
 
 interface AccountSelectorProps {
   accounts: XAccount[]
   currentAccountId: number
-  onSelect: (id: number) => void
 }
 
-export function AccountSelector({
-  accounts,
-  currentAccountId,
-  onSelect,
-}: AccountSelectorProps) {
+export function AccountSelector({ accounts, currentAccountId }: AccountSelectorProps) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
   if (accounts.length === 0) return null
 
   if (accounts.length === 1) {
@@ -21,18 +27,27 @@ export function AccountSelector({
     )
   }
 
+  function handleSelect(value: string) {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('account_id', value)
+    router.push(`?${params.toString()}`)
+  }
+
   return (
-    <select
-      value={currentAccountId}
-      onChange={(e) => onSelect(Number(e.target.value))}
-      aria-label="Xアカウントを切り替え"
-      className="text-sm border border-gray-200 rounded-md px-2 py-1 bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-    >
-      {accounts.map((account) => (
-        <option key={account.id} value={account.id}>
-          @{account.x_username}
-        </option>
-      ))}
-    </select>
+    <Select value={String(currentAccountId)} onValueChange={handleSelect}>
+      <SelectTrigger
+        className="h-8 w-auto min-w-[140px] text-sm border-gray-200"
+        aria-label="Xアカウントを切り替え"
+      >
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {accounts.map((account) => (
+          <SelectItem key={account.id} value={String(account.id)}>
+            @{account.x_username}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   )
 }
