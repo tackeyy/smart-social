@@ -31,59 +31,84 @@ export default async function DashboardPage() {
       .eq('status', 'pending'),
   ])
 
+  const hasPending = (pendingDrafts ?? 0) > 0
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">ダッシュボード</h1>
+        <div>
+          <h1 className="text-xl font-semibold tracking-[-0.02em] text-manavi-navy">
+            ダッシュボード
+          </h1>
+          <p className="text-sm text-manavi-navy-light mt-0.5">
+            投稿の状況を確認します
+          </p>
+        </div>
         <GenerateProfileButton />
       </div>
 
+      {/* 統計カード */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">
+        <Card className="shadow-manavi-sm rounded-[6px] border-manavi-border">
+          <CardHeader className="pb-2 pt-5 px-5">
+            <CardTitle className="text-xs font-medium text-manavi-navy-light uppercase tracking-wide">
               本日のスケジュール投稿
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{scheduledToday ?? 0}</p>
-            <p className="text-xs text-gray-400 mt-1">件</p>
+          <CardContent className="px-5 pb-5">
+            <p className="text-3xl font-semibold tabular-nums text-manavi-navy">
+              {scheduledToday ?? 0}
+            </p>
+            <p className="text-xs text-manavi-muted mt-1">件</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">
+        <Card className="shadow-manavi-sm rounded-[6px] border-manavi-border">
+          <CardHeader className="pb-2 pt-5 px-5">
+            <CardTitle className="text-xs font-medium text-manavi-navy-light uppercase tracking-wide">
               承認待ちドラフト
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-5 pb-5">
             <div className="flex items-center gap-2">
-              <p className="text-3xl font-bold">{pendingDrafts ?? 0}</p>
-              {(pendingDrafts ?? 0) > 0 && (
-                <Badge variant="secondary">要対応</Badge>
+              <p className="text-3xl font-semibold tabular-nums text-manavi-navy">
+                {pendingDrafts ?? 0}
+              </p>
+              {hasPending && (
+                <Badge className="bg-manavi-bg-accent text-manavi-primary border border-manavi-primary/20 text-xs rounded-[4px] px-1.5 py-0.5">
+                  要対応
+                </Badge>
               )}
             </div>
-            <p className="text-xs text-gray-400 mt-1">件</p>
+            <p className="text-xs text-manavi-muted mt-1">件</p>
           </CardContent>
         </Card>
       </div>
 
+      {/* ナビゲーションカード */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Link
           href="/dashboard/drafts"
-          className="block p-4 bg-white border border-gray-200 rounded-lg hover:border-blue-400 hover:shadow-sm transition-all"
+          className="block p-5 bg-white border border-manavi-border rounded-[6px] shadow-manavi-sm hover:border-manavi-primary hover:shadow-manavi-md transition-all duration-150 group"
         >
-          <h2 className="font-semibold mb-1">ドラフト管理</h2>
-          <p className="text-sm text-gray-500">AIが生成した投稿候補を確認・承認・編集します</p>
+          <h2 className="text-sm font-semibold text-manavi-navy mb-1 group-hover:text-manavi-primary transition-colors duration-150">
+            ドラフト管理
+          </h2>
+          <p className="text-xs text-manavi-navy-light">
+            AIが生成した投稿候補を確認・承認・編集します
+          </p>
         </Link>
 
         <Link
           href="/dashboard/schedule"
-          className="block p-4 bg-white border border-gray-200 rounded-lg hover:border-blue-400 hover:shadow-sm transition-all"
+          className="block p-5 bg-white border border-manavi-border rounded-[6px] shadow-manavi-sm hover:border-manavi-primary hover:shadow-manavi-md transition-all duration-150 group"
         >
-          <h2 className="font-semibold mb-1">スケジュール管理</h2>
-          <p className="text-sm text-gray-500">投稿のスケジュールを確認・作成・削除します</p>
+          <h2 className="text-sm font-semibold text-manavi-navy mb-1 group-hover:text-manavi-primary transition-colors duration-150">
+            スケジュール管理
+          </h2>
+          <p className="text-xs text-manavi-navy-light">
+            投稿のスケジュールを確認・作成・削除します
+          </p>
         </Link>
       </div>
     </div>

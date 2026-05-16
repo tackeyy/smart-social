@@ -1,26 +1,66 @@
 @import "tailwindcss";
 
+/* M&Aナビ × Stripe デザイントークン */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* shadcn/ui semantic tokens */
+  --background: 243 246 249;        /* #F3F6F9 ページ背景 */
+  --foreground: 51 56 81;           /* #333851 メインテキスト */
+  --card: 255 255 255;
+  --card-foreground: 51 56 81;
+  --popover: 255 255 255;
+  --popover-foreground: 51 56 81;
+  --primary: 2 132 254;             /* #0284FE M&Aナビブルー */
+  --primary-foreground: 255 255 255;
+  --secondary: 235 245 255;         /* #EBF5FF ライトブルー */
+  --secondary-foreground: 51 56 81;
+  --muted: 243 246 249;             /* #F3F6F9 */
+  --muted-foreground: 94 105 147;   /* #5E6993 */
+  --accent: 235 245 255;
+  --accent-foreground: 51 56 81;
+  --destructive: 197 34 31;         /* #C5221F */
+  --destructive-foreground: 255 255 255;
+  --border: 220 222 232;            /* #DCDEE8 */
+  --input: 220 222 232;
+  --ring: 2 132 254;
+  --radius: 0.375rem;               /* 6px カード */
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-background: rgb(var(--background));
+  --color-foreground: rgb(var(--foreground));
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* M&Aナビブランドカラー */
+  --color-manavi-primary:       #0284FE;
+  --color-manavi-primary-hover: #015CB1;
+  --color-manavi-navy:          #333851;
+  --color-manavi-navy-light:    #5E6993;
+  --color-manavi-muted:         #9298B6;
+  --color-manavi-bg:            #F3F6F9;
+  --color-manavi-bg-accent:     #EBF5FF;
+  --color-manavi-border:        #DCDEE8;
+  --color-manavi-success:       #208770;
+  --color-manavi-success-bg:    #D3F2EB;
+  --color-manavi-error:         #C5221F;
+
+  /* Stripe風シャドウ */
+  --shadow-manavi-sm:    0px 1px 1px rgba(0,0,0,0.03), 0px 3px 6px rgba(18,42,66,0.02);
+  --shadow-manavi-md:    0px 3px 10px rgba(18,42,66,0.08);
+  --shadow-manavi-focus: 0 0 0 3px rgba(2,132,254,0.25);
+
+  /* Border radius（Stripe準拠） */
+  --radius-manavi-btn:  4px;
+  --radius-manavi-card: 6px;
+
+  /* Font */
+  --font-sans: var(--font-inter-tight);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: rgb(var(--background));
+  color: rgb(var(--foreground));
+  font-feature-settings: "ss01"; /* single-story 'a' */
+}
+
+.tabular-nums {
+  font-feature-settings: "tnum";
 }

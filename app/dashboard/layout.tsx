@@ -5,6 +5,15 @@ import { Toaster } from '@/components/ui/sonner'
 import { AccountSelector } from '@/components/AccountSelector'
 import type { XAccount } from '@/types/app'
 
+const navLinks = [
+  { href: '/dashboard', label: 'ダッシュボード' },
+  { href: '/dashboard/drafts', label: 'ドラフト' },
+  { href: '/dashboard/schedule', label: 'スケジュール' },
+  { href: '/dashboard/analytics', label: '分析' },
+  { href: '/dashboard/accounts', label: 'アカウント' },
+  { href: '/dashboard/settings', label: '設定' },
+]
+
 export default async function DashboardLayout({
   children,
 }: {
@@ -32,57 +41,35 @@ export default async function DashboardLayout({
   const currentAccount = xAccounts[0]
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-200">
+    <div className="min-h-screen bg-manavi-bg">
+      <nav className="bg-manavi-navy border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <div className="flex items-center space-x-8">
-              <Link href="/dashboard" className="font-bold text-lg">
-                Smart Social
-              </Link>
+          <div className="flex justify-between h-14 items-center">
+            <div className="flex items-center gap-6">
               <Link
                 href="/dashboard"
-                className="text-sm text-gray-600 hover:text-gray-900"
+                className="text-white font-semibold text-base tracking-[-0.01em] shrink-0"
               >
-                ダッシュボード
+                Smart Social
               </Link>
-              <Link
-                href="/dashboard/drafts"
-                className="text-sm text-gray-600 hover:text-gray-900"
-              >
-                ドラフト
-              </Link>
-              <Link
-                href="/dashboard/schedule"
-                className="text-sm text-gray-600 hover:text-gray-900"
-              >
-                スケジュール
-              </Link>
-              <Link
-                href="/dashboard/analytics"
-                className="text-sm text-gray-600 hover:text-gray-900"
-              >
-                分析
-              </Link>
-              <Link
-                href="/dashboard/accounts"
-                className="text-sm text-gray-600 hover:text-gray-900"
-              >
-                アカウント
-              </Link>
-              <Link
-                href="/dashboard/settings"
-                className="text-sm text-gray-600 hover:text-gray-900"
-              >
-                設定
-              </Link>
+              <div className="flex items-center gap-1">
+                {navLinks.map(({ href, label }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    className="text-sm text-white/60 hover:text-white px-3 py-1.5 rounded transition-colors duration-150"
+                  >
+                    {label}
+                  </Link>
+                ))}
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <AccountSelector
                 accounts={xAccounts}
                 currentAccountId={currentAccount.id}
               />
-              <span className="text-xs text-gray-400 truncate max-w-[200px]">
+              <span className="text-xs text-white/40 truncate max-w-[180px]">
                 {user.email}
               </span>
             </div>
