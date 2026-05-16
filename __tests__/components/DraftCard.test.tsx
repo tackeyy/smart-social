@@ -50,6 +50,32 @@ describe('DraftCard', () => {
     expect(header).toBeTruthy()
   })
 
+  describe('ツイート削除ボタン', () => {
+    it('投稿済みでposted_tweet_idがある場合は削除ボタンが表示される', () => {
+      render(React.createElement(DraftCard, {
+        draft: makeDraft({ status: 'posted', posted_tweet_id: 'tweet-123' }),
+        onStatusChange: vi.fn(),
+      }))
+      expect(screen.getByRole('button', { name: 'ツイートを削除' })).toBeTruthy()
+    })
+
+    it('pending状態の場合は削除ボタンが表示されない', () => {
+      render(React.createElement(DraftCard, {
+        draft: makeDraft({ status: 'pending' }),
+        onStatusChange: vi.fn(),
+      }))
+      expect(screen.queryByRole('button', { name: 'ツイートを削除' })).toBeNull()
+    })
+
+    it('posted_tweet_idがnullの場合は削除ボタンが表示されない', () => {
+      render(React.createElement(DraftCard, {
+        draft: makeDraft({ status: 'posted', posted_tweet_id: null }),
+        onStatusChange: vi.fn(),
+      }))
+      expect(screen.queryByRole('button', { name: 'ツイートを削除' })).toBeNull()
+    })
+  })
+
   describe('メディア添付UI', () => {
     it('pending状態のカードに画像を添付ボタンが表示される', () => {
       render(React.createElement(DraftCard, { draft: makeDraft(), onStatusChange: vi.fn() }))

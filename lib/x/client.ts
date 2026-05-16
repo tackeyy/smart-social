@@ -151,6 +151,33 @@ export async function postTweet(
   return data.data
 }
 
+export async function deleteTweet(
+  tweetId: string,
+  accountToken?: { access_token: string; access_token_secret: string }
+): Promise<{ deleted: boolean }> {
+  const method = 'DELETE'
+  const url = `${TWEET_URL}/${tweetId}`
+  const authHeader = buildOAuthHeader(method, url, accountToken)
+
+  const response = await fetch(url, {
+    method,
+    headers: { Authorization: authHeader },
+  })
+
+  const data = (await response.json()) as {
+    data?: { deleted: boolean }
+    errors?: Array<{ message: string }>
+  }
+
+  if (!response.ok) {
+    if (response.status === 429) throw new RateLimitError()
+    if (response.status === 401) throw new AuthError()
+    throw new Error(data.errors?.[0]?.message ?? `HTTP ${response.status}`)
+  }
+
+  return data.data ?? { deleted: true }
+}
+
 export async function postThread(params: ThreadParams): Promise<ThreadResult> {
   if (params.tweets.length < 2) {
     throw new Error('Thread requires at least 2 tweets')

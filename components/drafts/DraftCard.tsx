@@ -124,6 +124,27 @@ export function DraftCard({ draft, onStatusChange }: DraftCardProps) {
     }
   }
 
+  async function handleDeleteTweet() {
+    if (!draft.posted_tweet_id) return
+    setIsSubmitting(true)
+    try {
+      const res = await fetch(`/smart-social/api/x/tweet/${draft.posted_tweet_id}`, {
+        method: 'DELETE',
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error ?? 'ツイート削除失敗')
+      }
+      toast.success('ツイートを削除しました')
+      onStatusChange(draft.id, 'pending')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'ツイートの削除に失敗しました'
+      toast.error(msg)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   async function handleReject() {
     setIsSubmitting(true)
     try {
@@ -144,6 +165,7 @@ export function DraftCard({ draft, onStatusChange }: DraftCardProps) {
 
   const status = STATUS_LABEL[draft.status]
   const isActionable = draft.status === 'pending'
+  const isDeletable = draft.status === 'posted' && !!draft.posted_tweet_id
 
   return (
     <Card className="w-full">
@@ -272,6 +294,20 @@ export function DraftCard({ draft, onStatusChange }: DraftCardProps) {
           </div>
         )}
       </CardContent>
+
+      {isDeletable && (
+        <CardFooter className="pt-0">
+          <Button
+            size="sm"
+            variant="destructive"
+            aria-label="ツイートを削除"
+            onClick={handleDeleteTweet}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? '削除中...' : 'ツイートを削除'}
+          </Button>
+        </CardFooter>
+      )}
 
       {isActionable && !isEditing && (
         <CardFooter className="flex flex-col gap-2 pt-0 items-start">
