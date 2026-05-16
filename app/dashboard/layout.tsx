@@ -7,8 +7,10 @@ import type { XAccount } from '@/types/app'
 
 export default async function DashboardLayout({
   children,
+  searchParams,
 }: {
   children: React.ReactNode
+  searchParams: Promise<{ account_id?: string }>
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -29,7 +31,10 @@ export default async function DashboardLayout({
     redirect('/setup')
   }
 
-  const currentAccount = xAccounts[0]
+  const { account_id } = await searchParams
+  const currentAccount = account_id
+    ? (xAccounts.find((a) => a.id === Number(account_id)) ?? xAccounts[0])
+    : xAccounts[0]
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -58,12 +63,17 @@ export default async function DashboardLayout({
               >
                 スケジュール
               </Link>
+              <Link
+                href="/dashboard/accounts"
+                className="text-sm text-gray-600 hover:text-gray-900"
+              >
+                アカウント
+              </Link>
             </div>
             <div className="flex items-center gap-3">
               <AccountSelector
                 accounts={xAccounts}
                 currentAccountId={currentAccount.id}
-                onSelect={() => {}}
               />
               <span className="text-xs text-gray-400 truncate max-w-[200px]">
                 {user.email}
