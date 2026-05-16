@@ -7,10 +7,8 @@ import type { XAccount } from '@/types/app'
 
 export default async function DashboardLayout({
   children,
-  searchParams,
 }: {
   children: React.ReactNode
-  searchParams: Promise<{ account_id?: string }>
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -31,10 +29,7 @@ export default async function DashboardLayout({
     redirect('/setup')
   }
 
-  const { account_id } = await searchParams
-  const currentAccount = account_id
-    ? (xAccounts.find((a) => a.id === Number(account_id)) ?? xAccounts[0])
-    : xAccounts[0]
+  const currentAccount = xAccounts[0]
 
   return (
     <div className="min-h-screen bg-gray-50">

@@ -33,8 +33,11 @@ export function AccountSelector({ accounts, currentAccountId }: AccountSelectorP
     router.push(`?${params.toString()}`)
   }
 
+  const accountIdFromUrl = searchParams.get('account_id')
+  const currentValue = accountIdFromUrl ?? String(currentAccountId)
+
   return (
-    <Select value={String(currentAccountId)} onValueChange={handleSelect}>
+    <Select value={currentValue} onValueChange={handleSelect}>
       <SelectTrigger
         className="h-8 w-auto min-w-[140px] text-sm border-gray-200"
         aria-label="Xアカウントを切り替え"
