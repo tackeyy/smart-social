@@ -8,6 +8,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'email is required' }, { status: 400 })
   }
 
+  const allowedEmail = process.env.ALLOWED_EMAIL
+  if (allowedEmail && email !== allowedEmail) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+  }
+
   const supabase = await createClient()
   const { error } = await supabase.auth.signInWithOtp({
     email,
