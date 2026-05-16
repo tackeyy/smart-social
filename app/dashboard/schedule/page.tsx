@@ -80,7 +80,7 @@ export default function SchedulePage() {
     fetchPosts()
   }, [fetchPosts])
 
-  async function handleCreate(e: React.FormEvent) {
+  async function handleCreate(e: { preventDefault(): void }) {
     e.preventDefault()
     if (!text.trim() || !scheduledAt) return
     setCreating(true)
