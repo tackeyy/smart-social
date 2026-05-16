@@ -9,17 +9,26 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
+    setError(null)
     try {
       const res = await fetch('/smart-social/api/auth/send-magic-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       })
-      if (res.ok) setSent(true)
+      if (res.ok) {
+        setSent(true)
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setError(data.error ?? `エラーが発生しました (${res.status})`)
+      }
+    } catch {
+      setError('ネットワークエラーが発生しました')
     } finally {
       setLoading(false)
     }
@@ -71,6 +80,11 @@ export default function LoginPage() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
+                {error && (
+                  <div className="rounded-[6px] bg-red-50 border border-manavi-error/30 px-4 py-3">
+                    <p className="text-sm text-manavi-error">{error}</p>
+                  </div>
+                )}
                 <div className="space-y-1.5">
                   <label
                     htmlFor="email"
