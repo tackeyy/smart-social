@@ -4,33 +4,47 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-
-interface FormState {
-  x_username: string
-  display_name: string
-  x_user_id: string
-}
+import { Input } from '@/components/ui/input'
 
 export default function SetupPage() {
   const router = useRouter()
-  const [form, setForm] = useState<FormState>({
-    x_username: '',
-    display_name: '',
-    x_user_id: '',
-  })
+  const [username, setUsername] = useState('')
+  const [displayName, setDisplayName] = useState('')
+  const [xUserId, setXUserId] = useState('')
+  const [looking, setLooking] = useState(false)
+  const [lookupError, setLookupError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
-    setError(null)
+  async function lookupUser(value: string) {
+    const handle = value.trim().replace(/^@/, '')
+    if (!handle) return
+
+    setLooking(true)
+    setLookupError(null)
+    setDisplayName('')
+    setXUserId('')
+
+    try {
+      const res = await fetch(`/smart-social/api/x/lookup-user?username=${encodeURIComponent(handle)}`)
+      const data = await res.json()
+      if (!res.ok) {
+        setLookupError(data.error ?? 'ユーザー情報の取得に失敗しました')
+        return
+      }
+      setDisplayName(data.display_name)
+      setXUserId(data.x_user_id)
+    } catch {
+      setLookupError('ネットワークエラーが発生しました')
+    } finally {
+      setLooking(false)
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-
-    if (!form.x_username.trim() || !form.display_name.trim() || !form.x_user_id.trim()) {
-      setError('すべての項目を入力してください')
+    if (!username.trim() || !displayName || !xUserId) {
+      setError('@ユーザー名を入力してユーザー情報を取得してください')
       return
     }
 
@@ -42,17 +56,15 @@ export default function SetupPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          x_username: form.x_username.trim(),
-          display_name: form.display_name.trim(),
-          x_user_id: form.x_user_id.trim(),
+          x_username: username.trim().replace(/^@/, ''),
+          display_name: displayName,
+          x_user_id: xUserId,
         }),
       })
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        throw new Error(
-          (data as { error?: string }).error ?? `エラーが発生しました (${res.status})`
-        )
+        throw new Error((data as { error?: string }).error ?? `エラーが発生しました (${res.status})`)
       }
 
       router.push('/dashboard/drafts')
@@ -73,69 +85,44 @@ export default function SetupPage() {
           <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             <div className="space-y-1.5">
               <label htmlFor="x_username" className="text-sm font-medium">
-                @ユーザー名{' '}
-                <span aria-hidden="true" className="text-red-500">*</span>
+                @ユーザー名 <span className="text-red-500">*</span>
               </label>
-              <input
+              <Input
                 id="x_username"
-                name="x_username"
                 type="text"
-                value={form.x_username}
-                onChange={handleChange}
+                value={username}
+                onChange={(e) => { setUsername(e.target.value); setLookupError(null) }}
+                onBlur={(e) => lookupUser(e.target.value)}
                 placeholder="zeimu_ai（@なしで入力）"
                 disabled={submitting}
-                required
-                aria-required="true"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               />
+              {lookupError && (
+                <p className="text-xs text-manavi-error">{lookupError}</p>
+              )}
             </div>
 
-            <div className="space-y-1.5">
-              <label htmlFor="display_name" className="text-sm font-medium">
-                表示名{' '}
-                <span aria-hidden="true" className="text-red-500">*</span>
-              </label>
-              <input
-                id="display_name"
-                name="display_name"
-                type="text"
-                value={form.display_name}
-                onChange={handleChange}
-                placeholder="ぜいみー🦉"
-                disabled={submitting}
-                required
-                aria-required="true"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label htmlFor="x_user_id" className="text-sm font-medium">
-                X User ID{' '}
-                <span aria-hidden="true" className="text-red-500">*</span>
-              </label>
-              <input
-                id="x_user_id"
-                name="x_user_id"
-                type="text"
-                value={form.x_user_id}
-                onChange={handleChange}
-                placeholder="2035049358547369984（数値文字列）"
-                disabled={submitting}
-                required
-                aria-required="true"
-                inputMode="numeric"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              />
-            </div>
-
-            {error && (
-              <p role="alert" className="text-sm text-red-500">
-                {error}
-              </p>
+            {(looking || displayName) && (
+              <div className="rounded-[6px] border border-manavi-border bg-manavi-bg px-4 py-3 space-y-1">
+                {looking ? (
+                  <p className="text-sm text-manavi-navy-light">取得中...</p>
+                ) : (
+                  <>
+                    <p className="text-sm font-medium text-manavi-navy">{displayName}</p>
+                    <p className="text-xs text-manavi-navy-light">ID: {xUserId}</p>
+                  </>
+                )}
+              </div>
             )}
 
-            <Button type="submit" disabled={submitting} className="w-full">
+            {error && (
+              <p role="alert" className="text-sm text-manavi-error">{error}</p>
+            )}
+
+            <Button
+              type="submit"
+              disabled={submitting || looking || !displayName}
+              className="w-full"
+            >
               {submitting ? '設定中...' : '設定する'}
             </Button>
           </form>
