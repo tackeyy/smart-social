@@ -55,3 +55,21 @@ export interface XAccount {
   created_at: string
   updated_at: string
 }
+
+export type TeamRole = 'owner' | 'admin' | 'member'
+
+export interface Team {
+  id: string
+  name: string
+  created_by: string
+  created_at: string
+  updated_at: string
+}
+
+export interface TeamMember {
+  team_id: string
+  user_id: string
+  role: TeamRole
+  invited_by: string | null
+  joined_at: string
+}
