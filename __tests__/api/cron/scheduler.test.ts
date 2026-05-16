@@ -114,6 +114,19 @@ describe('GET /api/cron/scheduler', () => {
         ]),
       })
     )
+
+    // posted_tweet_id が DB 更新に含まれていることを検証
+    const fromMock = mockCreateClient.mock.results[0].value.from as ReturnType<typeof vi.fn>
+    const updateMock = fromMock.mock.results[0].value.update as ReturnType<typeof vi.fn>
+    // 2回目以降の update 呼び出し（posted 更新）に posted_tweet_id が含まれること
+    const postedUpdateCalls = updateMock.mock.calls.slice(1)
+    for (const [updateArg] of postedUpdateCalls) {
+      expect(updateArg).toMatchObject({
+        status: 'posted',
+        posted_tweet_id: 'tweet-1',
+        posted_at: expect.any(String),
+      })
+    }
   })
 
   it('pending投稿がない場合はprocessed=0を返す', async () => {
