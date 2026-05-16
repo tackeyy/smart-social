@@ -18,6 +18,10 @@ export async function PATCH(
   if (!body.scheduled_at) {
     return NextResponse.json({ error: 'scheduled_at は必須です' }, { status: 400 })
   }
+  // scheduled_at のバリデーション（typeof + isNaN の2重防御）
+  if (typeof body.scheduled_at !== 'string') {
+    return NextResponse.json({ error: 'scheduled_at は文字列で指定してください' }, { status: 400 })
+  }
   const scheduledAt = new Date(body.scheduled_at)
   if (isNaN(scheduledAt.getTime()) || scheduledAt <= new Date()) {
     return NextResponse.json({ error: '過去の日時は指定できません' }, { status: 400 })

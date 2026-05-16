@@ -139,6 +139,25 @@ describe('PATCH /api/schedule/[id]', () => {
     )
   })
 
+  it('scheduled_atが文字列以外の場合は400を返す', async () => {
+    mockCreateClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null }),
+      },
+      from: vi.fn(),
+    } as any)
+
+    const request = new Request('http://localhost/api/schedule/1', {
+      method: 'PATCH',
+      body: JSON.stringify({ scheduled_at: 12345 }),
+    })
+    await PATCH(request, makeParams('1'))
+    expect(mockNextResponseJson).toHaveBeenCalledWith(
+      { error: 'scheduled_at は文字列で指定してください' },
+      { status: 400 }
+    )
+  })
+
   it('過去の日時の場合は400を返す', async () => {
     mockCreateClient.mockResolvedValue({
       auth: {

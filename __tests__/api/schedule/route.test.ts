@@ -115,6 +115,26 @@ describe('POST /api/schedule', () => {
     )
   })
 
+  it('scheduled_atが文字列以外の場合は400を返す', async () => {
+    mockCreateClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null }),
+      },
+      from: vi.fn(),
+    } as any)
+
+    const request = new Request('http://localhost/api/schedule', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ draft_id: 'd-1', scheduled_at: 12345 }),
+    })
+    await POST(request)
+    expect(mockNextResponseJson).toHaveBeenCalledWith(
+      { error: 'scheduled_at は文字列で指定してください' },
+      { status: 400 }
+    )
+  })
+
   it('認証済みの場合は201とスケジュールデータを返す', async () => {
     // drafts の UPDATE で scheduled_at と status='scheduled' をセット
     const updated = { id: 'd-1', scheduled_at: '2026-05-17T10:00:00Z', status: 'scheduled' }
