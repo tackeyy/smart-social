@@ -25,9 +25,10 @@ export default async function SettingsPage({
 
   const xAccounts = (accounts ?? []) as XAccount[]
 
-  const selectedId = params.account_id ? parseInt(params.account_id, 10) : null
+  const parsedId = params.account_id ? parseInt(params.account_id, 10) : null
+  const validSelectedId = parsedId !== null && !Number.isNaN(parsedId) ? parsedId : null
   const currentAccount =
-    (selectedId ? xAccounts.find((a) => a.id === selectedId) : null) ?? xAccounts[0]
+    (validSelectedId ? xAccounts.find((a) => a.id === validSelectedId) : null) ?? xAccounts[0]
 
   const { data: profileRow } = currentAccount
     ? await supabase

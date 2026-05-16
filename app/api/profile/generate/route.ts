@@ -1,8 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { generateStyleProfile } from '@/lib/claude/client'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 const X_API_BASE = 'https://api.x.com/2'
+const PROFILE_GENERATE_COOLDOWN_MS = 5 * 60 * 1000
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -33,6 +35,14 @@ export async function POST(request: Request) {
 
   if (accountError || !account) {
     return NextResponse.json({ error: 'Xアカウントが見つからないか、アクセス権限がありません' }, { status: 403 })
+  }
+
+  const { allowed, remainingSec } = checkRateLimit(
+    `${user.id}:profile:${body.x_account_id}`,
+    PROFILE_GENERATE_COOLDOWN_MS
+  )
+  if (!allowed) {
+    return NextResponse.json({ error: `再生成は ${remainingSec} 秒後に実行できます` }, { status: 429 })
   }
 
   const bearerToken = process.env.X_BEARER_TOKEN

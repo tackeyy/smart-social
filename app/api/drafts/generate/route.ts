@@ -1,6 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { generateDraftCandidates } from '@/lib/claude/client'
+import { checkRateLimit } from '@/lib/rate-limit'
+
+const DRAFTS_GENERATE_COOLDOWN_MS = 30 * 1000
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -36,6 +39,17 @@ export async function POST(request: Request) {
 
   if (accountError || !account) {
     return NextResponse.json({ error: 'Xアカウントが見つからないか、アクセス権限がありません' }, { status: 403 })
+  }
+
+  const { allowed, remainingSec } = checkRateLimit(
+    `${user.id}:drafts:generate`,
+    DRAFTS_GENERATE_COOLDOWN_MS
+  )
+  if (!allowed) {
+    return NextResponse.json(
+      { error: `リクエストが多すぎます。${remainingSec} 秒後に再試行してください` },
+      { status: 429 }
+    )
   }
 
   // style_profiles から最新プロファイル取得

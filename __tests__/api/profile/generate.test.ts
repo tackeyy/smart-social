@@ -16,6 +16,10 @@ vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(),
 }))
 
+vi.mock('@/lib/rate-limit', () => ({
+  checkRateLimit: vi.fn(() => ({ allowed: true, remainingSec: 0 })),
+}))
+
 // lib/claude/client をモック（M-2: createAnthropicハック削除に対応）
 vi.mock('@/lib/claude/client', () => ({
   generateStyleProfile: vi.fn(),
