@@ -75,6 +75,12 @@ export default async function DashboardLayout({
               >
                 アカウント
               </Link>
+              <Link
+                href="/dashboard/settings"
+                className="text-sm text-gray-600 hover:text-gray-900"
+              >
+                設定
+              </Link>
             </div>
             <div className="flex items-center gap-3">
               <AccountSelector
