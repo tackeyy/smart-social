@@ -40,7 +40,7 @@ const mockGenerateDraftCandidates = vi.mocked(generateDraftCandidates)
  * - リクエストボディに x_account_id と source_tweet_url（またはtweet_id）を受け取る
  * - style_profiles テーブルからユーザーの文体プロファイルを取得（未生成なら404）
  * - lib/claude/client の generateDraftCandidates でリプライドラフトを3候補生成
- * - reply_drafts テーブルに保存して返す
+ * - drafts テーブルに type='reply' で1レコード（ai_candidates 配列に3候補）保存して返す
  */
 describe('POST /api/drafts/generate', () => {
   beforeEach(() => {
@@ -131,7 +131,7 @@ describe('POST /api/drafts/generate', () => {
     )
   })
 
-  it('正常系: Claude APIで3候補生成→reply_draftsに保存', async () => {
+  it('正常系: Claude APIで3候補生成→draftsに1レコードで保存', async () => {
     // Arrange
     const mockProfile = {
       id: 'profile-1',
@@ -154,13 +154,19 @@ describe('POST /api/drafts/generate', () => {
     // generateDraftCandidates が3候補を返す
     mockGenerateDraftCandidates.mockResolvedValue(mockDraftCandidates)
 
-    const mockInsert = vi.fn().mockResolvedValue({
-      data: mockDraftCandidates.map((text, i) => ({
-        id: `draft-${i + 1}`,
-        content: text,
-        status: 'pending',
-      })),
-      error: null,
+    // 1レコードにまとめた INSERT 結果
+    const mockInsertedDraft = {
+      id: 'draft-1',
+      type: 'reply',
+      content: '候補1のドラフトテキスト',
+      ai_candidates: mockDraftCandidates.map(text => ({ text, generated_by: 'claude-sonnet-4-6' })),
+      selected_index: 0,
+      status: 'pending',
+    }
+
+    const mockInsert = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: mockInsertedDraft, error: null }),
     })
 
     mockCreateClient.mockResolvedValue({
@@ -190,7 +196,7 @@ describe('POST /api/drafts/generate', () => {
             maybeSingle: vi.fn().mockResolvedValue({ data: mockProfile, error: null }),
           }
         }
-        if (table === 'reply_drafts') {
+        if (table === 'drafts') {
           return { insert: mockInsert }
         }
         return { from: vi.fn() }
@@ -211,9 +217,9 @@ describe('POST /api/drafts/generate', () => {
 
     // Assert: generateDraftCandidates が呼ばれたこと
     expect(mockGenerateDraftCandidates).toHaveBeenCalledOnce()
-    // Assert: reply_drafts への INSERT が呼ばれたこと
+    // Assert: drafts への INSERT が呼ばれたこと
     expect(mockInsert).toHaveBeenCalledOnce()
-    // Assert: 3候補が返ること
+    // Assert: レスポンスに drafts が含まれること
     expect(mockNextResponseJson).toHaveBeenCalledWith(
       expect.objectContaining({
         drafts: expect.arrayContaining([
@@ -223,18 +229,26 @@ describe('POST /api/drafts/generate', () => {
     )
   })
 
-  it('正常系: 生成されたドラフトは3件であること', async () => {
+  it('正常系: 生成されたドラフトは1レコード（ai_candidatesに3候補）であること', async () => {
     // Arrange
     const mockProfile = {
       id: 'profile-1',
       x_account_id: 'account-1',
       profile_data: { tone: 'casual' },
     }
-    const mockDrafts = [
-      { id: 'draft-1', content: '候補1', status: 'pending' },
-      { id: 'draft-2', content: '候補2', status: 'pending' },
-      { id: 'draft-3', content: '候補3', status: 'pending' },
-    ]
+    // 1レコードに3候補をまとめた構造
+    const mockDraft = {
+      id: 'draft-1',
+      type: 'reply',
+      content: '候補1',
+      ai_candidates: [
+        { text: '候補1', generated_by: 'claude-sonnet-4-6' },
+        { text: '候補2', generated_by: 'claude-sonnet-4-6' },
+        { text: '候補3', generated_by: 'claude-sonnet-4-6' },
+      ],
+      selected_index: 0,
+      status: 'pending',
+    }
 
     mockGenerateDraftCandidates.mockResolvedValue(['候補1', '候補2', '候補3'])
 
@@ -265,9 +279,12 @@ describe('POST /api/drafts/generate', () => {
             maybeSingle: vi.fn().mockResolvedValue({ data: mockProfile, error: null }),
           }
         }
-        if (table === 'reply_drafts') {
+        if (table === 'drafts') {
           return {
-            insert: vi.fn().mockResolvedValue({ data: mockDrafts, error: null }),
+            insert: vi.fn().mockReturnValue({
+              select: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({ data: mockDraft, error: null }),
+            }),
           }
         }
         return { from: vi.fn() }
@@ -286,18 +303,23 @@ describe('POST /api/drafts/generate', () => {
     // Act
     await POST(request)
 
-    // Assert: ちょうど3件のドラフトが返る
+    // Assert: レスポンスは配列形式（後方互換）で、1レコード、ai_candidates に3候補
     expect(mockNextResponseJson).toHaveBeenCalledWith(
       expect.objectContaining({
         drafts: expect.arrayContaining([
-          expect.objectContaining({ content: '候補1' }),
-          expect.objectContaining({ content: '候補2' }),
-          expect.objectContaining({ content: '候補3' }),
+          expect.objectContaining({
+            content: '候補1',
+            ai_candidates: expect.arrayContaining([
+              expect.objectContaining({ text: '候補1' }),
+              expect.objectContaining({ text: '候補2' }),
+              expect.objectContaining({ text: '候補3' }),
+            ]),
+          }),
         ]),
       })
     )
     const callArg = mockNextResponseJson.mock.calls[0][0] as { drafts: unknown[] }
-    expect(callArg.drafts).toHaveLength(3)
+    expect(callArg.drafts).toHaveLength(1)
   })
 
   it('Claude API が失敗した場合は500を返す', async () => {

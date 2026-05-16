@@ -124,6 +124,26 @@ export function DraftCard({ draft, onStatusChange }: DraftCardProps) {
       </CardHeader>
 
       <CardContent className="space-y-3">
+        {/* 返信元ツイート（reply 種別のみ） */}
+        {draft.type === 'reply' && draft.source_tweet_text && (
+          <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 space-y-0.5">
+            <p className="text-xs font-medium text-gray-500">返信元ツイート</p>
+            <p className="text-xs text-gray-600 whitespace-pre-wrap leading-relaxed line-clamp-3">
+              {draft.source_tweet_text}
+            </p>
+            {draft.source_tweet_id && (
+              <a
+                href={`https://x.com/i/web/status/${draft.source_tweet_id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-blue-500 hover:underline"
+              >
+                元ツイートを見る
+              </a>
+            )}
+          </div>
+        )}
+
         {isEditing ? (
           <div className="space-y-1">
             <Textarea
@@ -168,6 +188,29 @@ export function DraftCard({ draft, onStatusChange }: DraftCardProps) {
             <span className="text-xs text-gray-400">
               {charCount} 文字
             </span>
+          </div>
+        )}
+
+        {/* AI候補一覧（reply 種別かつ候補が存在する場合） */}
+        {draft.type === 'reply' && draft.ai_candidates && draft.ai_candidates.length > 0 && (
+          <div className="space-y-1.5">
+            <p className="text-xs font-medium text-gray-500">AI生成候補</p>
+            <ol className="space-y-1">
+              {draft.ai_candidates.map((candidate, idx) => (
+                <li
+                  key={idx}
+                  className={`rounded-md border px-3 py-2 text-xs whitespace-pre-wrap leading-relaxed ${
+                    draft.selected_index === idx
+                      ? 'border-blue-400 bg-blue-50 text-blue-900'
+                      : 'border-gray-200 bg-white text-gray-700'
+                  }`}
+                  aria-label={`候補 ${idx + 1}${draft.selected_index === idx ? '（選択中）' : ''}`}
+                >
+                  <span className="font-medium mr-1">{idx + 1}.</span>
+                  {candidate.text}
+                </li>
+              ))}
+            </ol>
           </div>
         )}
       </CardContent>

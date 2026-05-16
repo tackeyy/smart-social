@@ -14,23 +14,15 @@ export async function POST(
     return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
   }
 
-  // reply_drafts は x_account_id 経由でユーザーに紐づくため、
-  // ユーザーが所有する x_account_ids を先に取得して所有権を確認する
-  const { data: accounts } = await supabase
-    .from('x_accounts')
-    .select('id')
-    .eq('user_id', user.id)
-
-  const accountIds = accounts?.map(a => a.id) ?? []
-
+  // drafts テーブルに user_id があるため直接比較で所有権確認（RLS + user_id 直接チェック）
   // H-1: アトミックに pending → processing へ遷移（レースコンディション防止）
   // pending 以外の行は更新されないため、複数リクエストが同時に来ても1つだけが処理される
   const { data: claimed, error: claimError } = await supabase
-    .from('reply_drafts')
+    .from('drafts')
     .update({ status: 'processing' })
     .eq('id', id)
     .eq('status', 'pending')
-    .in('x_account_id', accountIds)
+    .eq('user_id', user.id)
     .select()
     .single()
 
@@ -38,10 +30,10 @@ export async function POST(
     // pending でない（posted / processing / rejected）か、存在しないか、権限なし
     // どの状態かを確認するため、現状を取得する
     const { data: existing, error: fetchError } = await supabase
-      .from('reply_drafts')
+      .from('drafts')
       .select('id, status')
       .eq('id', id)
-      .in('x_account_id', accountIds)
+      .eq('user_id', user.id)
       .single()
 
     if (fetchError?.code === 'PGRST116' || !existing) {
@@ -71,7 +63,7 @@ export async function POST(
     const tweet = await postTweet({ text: claimed.content })
 
     const { data: updated, error: updateError } = await supabase
-      .from('reply_drafts')
+      .from('drafts')
       .update({ status: 'posted', posted_tweet_id: tweet.id, posted_at: new Date().toISOString() })
       .eq('id', id)
       .select()
@@ -94,7 +86,7 @@ export async function POST(
   } catch (err) {
     // X API 失敗: processing → pending に戻してリトライ可能にする
     await supabase
-      .from('reply_drafts')
+      .from('drafts')
       .update({ status: 'pending' })
       .eq('id', id)
 

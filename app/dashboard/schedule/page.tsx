@@ -14,16 +14,12 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import type { ScheduledPost, Draft } from '@/types/app'
+import type { Draft } from '@/types/app'
 
-interface ScheduledPostWithDraft extends ScheduledPost {
-  drafts: Draft | null
-}
-
-const STATUS_LABEL: Record<ScheduledPost['status'], { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  pending: { label: '待機中', variant: 'secondary' },
-  posted: { label: '投稿済み', variant: 'default' },
-  failed: { label: '失敗', variant: 'destructive' },
+const STATUS_LABEL: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+  scheduled: { label: '待機中', variant: 'secondary' },
+  posted:    { label: '投稿済み', variant: 'default' },
+  failed:    { label: '失敗', variant: 'destructive' },
 }
 
 const MAX_CHARS = 280
@@ -50,7 +46,7 @@ function getJSTNow(): string {
 }
 
 export default function SchedulePage() {
-  const [posts, setPosts] = useState<ScheduledPostWithDraft[]>([])
+  const [posts, setPosts] = useState<Draft[]>([])
   const [loading, setLoading] = useState(true)
 
   // 新規作成フォーム state
@@ -63,7 +59,7 @@ export default function SchedulePage() {
     try {
       const res = await fetch('/smart-social/api/schedule')
       if (!res.ok) throw new Error('取得失敗')
-      const data: ScheduledPostWithDraft[] = await res.json()
+      const data: Draft[] = await res.json()
       setPosts(data)
     } catch {
       toast.error('スケジュールの取得に失敗しました')
@@ -93,7 +89,7 @@ export default function SchedulePage() {
       // Step 2: datetime-local の値はブラウザのローカル時刻→ISO変換
       const scheduledISO = new Date(scheduledAt).toISOString()
 
-      // Step 3: スケジュール登録
+      // Step 3: drafts に scheduled_at をセット（status: 'scheduled' に更新）
       const schedRes = await fetch('/smart-social/api/schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -113,16 +109,17 @@ export default function SchedulePage() {
     }
   }
 
-  async function handleDelete(id: string) {
+  async function handleCancel(id: string) {
     try {
+      // DELETE → drafts の status を 'pending' に戻す（scheduled_at を null に）
       const res = await fetch(`/smart-social/api/schedule/${id}`, {
         method: 'DELETE',
       })
-      if (!res.ok && res.status !== 204) throw new Error('削除失敗')
-      toast.success('スケジュールを削除しました')
+      if (!res.ok && res.status !== 204) throw new Error('キャンセル失敗')
+      toast.success('スケジュールをキャンセルしました')
       setPosts((prev) => prev.filter((p) => p.id !== id))
     } catch {
-      toast.error('削除に失敗しました')
+      toast.error('キャンセルに失敗しました')
     }
   }
 
@@ -203,12 +200,13 @@ export default function SchedulePage() {
               </TableHeader>
               <TableBody>
                 {posts.map((post) => {
-                  const statusInfo = STATUS_LABEL[post.status]
-                  const preview = post.drafts?.content ?? '—'
+                  const statusInfo = STATUS_LABEL[post.status] ?? { label: post.status, variant: 'outline' as const }
+                  const preview = post.content || '—'
+                  const postScheduledAt = post.scheduled_at ?? ''
                   return (
                     <TableRow key={post.id}>
                       <TableCell className="text-sm">
-                        {formatJST(post.scheduled_at)}
+                        {postScheduledAt ? formatJST(postScheduledAt) : '—'}
                       </TableCell>
                       <TableCell className="text-sm max-w-xs">
                         <p className="truncate">{preview}</p>
@@ -217,14 +215,14 @@ export default function SchedulePage() {
                         <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        {post.status === 'pending' && (
+                        {post.status === 'scheduled' && (
                           <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() => handleDelete(post.id)}
-                            aria-label={`スケジュール削除: ${formatJST(post.scheduled_at)}`}
+                            onClick={() => handleCancel(String(post.id))}
+                            aria-label={`スケジュールキャンセル: ${postScheduledAt ? formatJST(postScheduledAt) : ''}`}
                           >
-                            削除
+                            キャンセル
                           </Button>
                         )}
                       </TableCell>

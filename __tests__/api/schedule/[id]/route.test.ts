@@ -48,7 +48,9 @@ describe('DELETE /api/schedule/[id]', () => {
     )
   })
 
-  it('認証済みの場合は204を返す', async () => {
+  it('認証済みの場合は204を返す（scheduled → pending にリセット）', async () => {
+    // scheduled_posts DELETE ではなく drafts の scheduled_at をクリアして pending に戻す
+    const updatedDraft = { id: '1', status: 'pending', scheduled_at: null }
     mockCreateClient.mockResolvedValue({
       auth: {
         getUser: vi.fn().mockResolvedValue({
@@ -57,8 +59,10 @@ describe('DELETE /api/schedule/[id]', () => {
         }),
       },
       from: vi.fn().mockReturnValue({
-        delete: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ error: null }),
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: updatedDraft, error: null }),
       }),
     } as any)
 
@@ -76,8 +80,10 @@ describe('DELETE /api/schedule/[id]', () => {
         }),
       },
       from: vi.fn().mockReturnValue({
-        delete: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ error: { message: 'db error' } }),
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: null, error: { message: 'db error' } }),
       }),
     } as any)
 

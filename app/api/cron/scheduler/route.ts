@@ -25,15 +25,16 @@ export async function GET(request: Request) {
 
   const now = new Date().toISOString()
 
-  // アトミックに status='pending' → 'processing' へ更新し、
-  // 返ってきた行のみ処理する（Vercel Cron 二重実行による二重投稿防止）
+  // drafts テーブルから status='scheduled' かつ scheduled_at が到達済みの行をアトミックに
+  // 'processing' へ更新し、返ってきた行のみ処理する（Vercel Cron 二重実行による二重投稿防止）
   const { data: posts, error } = await supabase
-    .from('scheduled_posts')
+    .from('drafts')
     .update({ status: 'processing' })
-    .eq('status', 'pending')
+    .eq('status', 'scheduled')
     .lte('scheduled_at', now)
     .lt('retry_count', 3)
-    .select('*, drafts(*)')
+    .in('type', ['original', 'thread'])
+    .select('*')
 
   if (error) {
     console.error('Cron scheduler error:', error)
@@ -43,13 +44,19 @@ export async function GET(request: Request) {
   const results: Array<{ id: string; status: string }> = []
 
   for (const post of posts ?? []) {
-    const text = post.drafts?.content ?? ''
+    // drafts テーブルに統合済みのため content を直接参照
+    const text = post.content ?? ''
     try {
       const tweet = await postTweet({ text })
 
       const { error: updateError } = await supabase
-        .from('scheduled_posts')
-        .update({ status: 'posted', posted_tweet_id: tweet.id, posted_at: new Date().toISOString() })
+        .from('drafts')
+        .update({
+          status: 'posted',
+          posted_tweet_id: tweet.id,
+          posted_at: new Date().toISOString(),
+          last_error: null,  // 成功時は前回のエラーメッセージをクリア
+        })
         .eq('id', post.id)
 
       if (updateError) {
@@ -58,10 +65,10 @@ export async function GET(request: Request) {
           postId: post.id,
           error: updateError,
         })
-        // processing のままデッドロックを避けるため pending に戻す
+        // processing のままデッドロックを避けるため scheduled に戻す
         await supabase
-          .from('scheduled_posts')
-          .update({ status: 'pending', last_error: 'DB sync failed after tweet posted' })
+          .from('drafts')
+          .update({ status: 'scheduled', last_error: 'DB sync failed after tweet posted' })
           .eq('id', post.id)
         results.push({ id: post.id, status: 'failed' })
         continue
@@ -72,9 +79,9 @@ export async function GET(request: Request) {
       const message = err instanceof Error ? err.message : 'Unknown error'
       const currentCount = post.retry_count ?? 0
       const newCount = currentCount + 1
-      const newStatus = newCount >= 3 ? 'failed' : 'pending'
+      const newStatus = newCount >= 3 ? 'failed' : 'scheduled'
       await supabase
-        .from('scheduled_posts')
+        .from('drafts')
         .update({ retry_count: newCount, last_error: message, status: newStatus })
         .eq('id', post.id)
       results.push({ id: post.id, status: newStatus })

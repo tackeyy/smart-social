@@ -65,11 +65,11 @@ describe('GET /api/cron/scheduler', () => {
     )
   })
 
-  it('pending投稿がある場合はX API呼び出し後にstatus=postedで返す', async () => {
-    // Arrange: アトミック update → select パターン
+  it('scheduled投稿がある場合はX API呼び出し後にstatus=postedで返す', async () => {
+    // Arrange: drafts テーブルから status='scheduled' のレコードを処理
     const mockPosts = [
-      { id: 'post-1', status: 'processing', retry_count: 0, drafts: { content: 'Hello' } },
-      { id: 'post-2', status: 'processing', retry_count: 0, drafts: { content: 'World' } },
+      { id: 'post-1', status: 'processing', retry_count: 0, content: 'Hello' },
+      { id: 'post-2', status: 'processing', retry_count: 0, content: 'World' },
     ]
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -77,11 +77,12 @@ describe('GET /api/cron/scheduler', () => {
       json: async () => ({ data: { id: 'tweet-1', text: 'Hello' } }),
     })
 
-    // update().eq().lte().lt().select() チェーンで処理対象を返す
+    // update().eq().lte().lt().in().select() チェーンで処理対象を返す
     const mockUpdateQueryBuilder = {
       eq: vi.fn().mockReturnThis(),
       lte: vi.fn().mockReturnThis(),
       lt: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
       select: vi.fn().mockResolvedValue({ data: mockPosts, error: null }),
     }
     // 成功時の posted 更新用
@@ -129,12 +130,13 @@ describe('GET /api/cron/scheduler', () => {
     }
   })
 
-  it('pending投稿がない場合はprocessed=0を返す', async () => {
+  it('scheduled投稿がない場合はprocessed=0を返す', async () => {
     // Arrange
     const mockUpdateQueryBuilder = {
       eq: vi.fn().mockReturnThis(),
       lte: vi.fn().mockReturnThis(),
       lt: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
       select: vi.fn().mockResolvedValue({ data: [], error: null }),
     }
     mockCreateClient.mockReturnValue({

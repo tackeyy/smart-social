@@ -9,19 +9,12 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
   }
 
-  // reply_drafts は x_account_id 経由でユーザーに紐づくため、
-  // ユーザーが所有する x_account_ids を先に取得して IN 句で絞る
-  const { data: accounts } = await supabase
-    .from('x_accounts')
-    .select('id')
-    .eq('user_id', user.id)
-
-  const accountIds = accounts?.map(a => a.id) ?? []
-
+  // drafts テーブルに user_id があるため直接フィルタできる（RLS + user_id 直接チェック）
   let query = supabase
-    .from('reply_drafts')
+    .from('drafts')
     .select('*')
-    .in('x_account_id', accountIds)
+    .eq('user_id', user.id)
+    .eq('type', 'reply')
 
   const url = new URL(request.url)
   const status = url.searchParams.get('status')
@@ -60,14 +53,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'アクセス権限がありません' }, { status: 403 })
   }
 
+  if (!body.source_tweet_id || !body.source_tweet_text) {
+    return NextResponse.json(
+      { error: 'source_tweet_id と source_tweet_text は必須です' },
+      { status: 400 }
+    )
+  }
+
+  // 3候補を ai_candidates JSONB 配列に格納し、1レコードで管理
   const { data, error } = await supabase
-    .from('reply_drafts')
+    .from('drafts')
     .insert({
-      x_account_id: body.x_account_id,
       user_id: user.id,
+      x_account_id: body.x_account_id,
+      type: 'reply',
+      content: '',  // 候補選択時に更新
       source_tweet_id: body.source_tweet_id,
       source_tweet_text: body.source_tweet_text,
-      draft_candidates: body.draft_candidates ?? [],
+      ai_candidates: body.draft_candidates ?? [],
+      status: 'pending',
     })
     .select()
     .single()

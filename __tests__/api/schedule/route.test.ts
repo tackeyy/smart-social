@@ -43,7 +43,7 @@ describe('GET /api/schedule', () => {
 
   it('認証済みの場合はスケジュール一覧を返す', async () => {
     const scheduled = [
-      { id: 1, draft_id: 'd-1', scheduled_at: '2026-05-17T10:00:00Z', status: 'pending', drafts: {} },
+      { id: 'd-1', scheduled_at: '2026-05-17T10:00:00Z', status: 'scheduled' },
     ]
     mockCreateClient.mockResolvedValue({
       auth: {
@@ -55,6 +55,8 @@ describe('GET /api/schedule', () => {
       from: vi.fn().mockReturnValue({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+        not: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: scheduled, error: null }),
       }),
     } as any)
@@ -74,6 +76,8 @@ describe('GET /api/schedule', () => {
       from: vi.fn().mockReturnValue({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+        not: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: null, error: { message: 'db error' } }),
       }),
     } as any)
@@ -112,7 +116,8 @@ describe('POST /api/schedule', () => {
   })
 
   it('認証済みの場合は201とスケジュールデータを返す', async () => {
-    const created = { id: 1, draft_id: 'd-1', scheduled_at: '2026-05-17T10:00:00Z', status: 'pending' }
+    // drafts の UPDATE で scheduled_at と status='scheduled' をセット
+    const updated = { id: 'd-1', scheduled_at: '2026-05-17T10:00:00Z', status: 'scheduled' }
     mockCreateClient.mockResolvedValue({
       auth: {
         getUser: vi.fn().mockResolvedValue({
@@ -121,9 +126,10 @@ describe('POST /api/schedule', () => {
         }),
       },
       from: vi.fn().mockReturnValue({
-        insert: vi.fn().mockReturnThis(),
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
         select: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data: created, error: null }),
+        single: vi.fn().mockResolvedValue({ data: updated, error: null }),
       }),
     } as any)
 
@@ -133,6 +139,6 @@ describe('POST /api/schedule', () => {
       body: JSON.stringify({ draft_id: 'd-1', scheduled_at: '2026-05-17T10:00:00Z' }),
     })
     await POST(request)
-    expect(mockNextResponseJson).toHaveBeenCalledWith(created, { status: 201 })
+    expect(mockNextResponseJson).toHaveBeenCalledWith(updated, { status: 201 })
   })
 })

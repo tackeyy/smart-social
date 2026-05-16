@@ -50,10 +50,11 @@ export async function POST(request: Request) {
   try {
     const { tweet_ids } = await postThread({ tweets })
 
-    // 最初のツイートをdraftsテーブルにstatus='posted'で保存
+    // 最初のツイートをdraftsテーブルにtype='thread', status='posted'で保存
     const { error: insertError } = await supabase.from('drafts').insert({
       user_id: user.id,
       x_account_id,
+      type: 'thread',
       content: tweets[0],
       status: 'posted',
       posted_at: new Date().toISOString(),

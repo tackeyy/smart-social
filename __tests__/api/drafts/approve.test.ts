@@ -35,8 +35,8 @@ function makeParams(id: string) {
 }
 
 /**
- * approve/route.ts は reply_drafts テーブルを x_account_id 経由で所有権確認する。
- * from('x_accounts') → x_account_ids 取得 → from('reply_drafts').in('x_account_id', ids) のフロー。
+ * approve/route.ts は drafts テーブルを user_id で直接所有権確認する。
+ * from('drafts').eq('user_id', user.id) のシンプルなフロー（RLS + user_id 直接チェック）。
  */
 describe('POST /api/drafts/[id]/approve', () => {
   beforeEach(() => {
@@ -53,7 +53,6 @@ describe('POST /api/drafts/[id]/approve', () => {
         update: vi.fn().mockReturnThis(),
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
-        in: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({ data: null, error: null }),
       }),
     } as any)
@@ -73,12 +72,11 @@ describe('POST /api/drafts/[id]/approve', () => {
   })
 
   it('存在しないidの場合は404を返す', async () => {
-    // Arrange: x_accounts は空を返し、reply_drafts は PGRST116 エラーを返す
+    // Arrange: drafts は PGRST116 エラーを返す（user_id 直接チェック）
     const mockQueryBuilder = {
       update: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      in: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({
         data: null,
         error: { code: 'PGRST116', message: 'Row not found' },
@@ -109,7 +107,7 @@ describe('POST /api/drafts/[id]/approve', () => {
   })
 
   it('既にpostedのドラフトは409を返す', async () => {
-    // Arrange: アトミック遷移の新フロー
+    // Arrange: アトミック遷移のフロー（user_id 直接チェック）
     // 1回目のupdate (pending→processing): PGRST116で0件（すでにposted）
     // 2回目のselect (現状確認): posted を返す
     const postedDraft = {
@@ -117,24 +115,22 @@ describe('POST /api/drafts/[id]/approve', () => {
       status: 'posted',
       posted_tweet_id: 'tweet-123',
     }
-    // claim用: update().eq().eq().in().select().single() → PGRST116 (0行更新)
+    // claim用: update().eq().eq().eq().select().single() → PGRST116 (0行更新)
     const mockClaimBuilder = {
       eq: vi.fn().mockReturnThis(),
-      in: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({
         data: null,
         error: { code: 'PGRST116', message: 'Row not found' },
       }),
     }
-    // fetch用: select().eq().in().single() → posted ドラフトを返す
+    // fetch用: select().eq().eq().single() → posted ドラフトを返す
     const mockFetchBuilder = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      in: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({ data: postedDraft, error: null }),
     }
-    let updateCallCount = 0
+    let fromCallCount = 0
     mockCreateClient.mockResolvedValue({
       auth: {
         getUser: vi.fn().mockResolvedValue({
@@ -142,16 +138,10 @@ describe('POST /api/drafts/[id]/approve', () => {
           error: null,
         }),
       },
-      from: vi.fn().mockImplementation((table: string) => {
-        if (table === 'x_accounts') {
-          return {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockResolvedValue({ data: [{ id: 'account-1' }], error: null }),
-          }
-        }
-        // reply_drafts: 最初はupdate (claim), 次はselect (fetch)
-        updateCallCount++
-        if (updateCallCount === 1) {
+      from: vi.fn().mockImplementation((_table: string) => {
+        // drafts: 最初はupdate (claim), 次はselect (fetch)
+        fromCallCount++
+        if (fromCallCount === 1) {
           return { update: vi.fn().mockReturnValue(mockClaimBuilder) }
         }
         return mockFetchBuilder
@@ -184,15 +174,15 @@ describe('POST /api/drafts/[id]/approve', () => {
     let selectCallCount = 0
     const mockSingle = vi.fn().mockImplementation(() => {
       selectCallCount++
-      // 1回目: ドラフト取得、2回目: 更新後のドラフト取得
+      // 1回目: ドラフト取得（claim）、2回目: 更新後のドラフト取得
       if (selectCallCount === 1) return Promise.resolve({ data: pendingDraft, error: null })
       return Promise.resolve({ data: updatedDraft, error: null })
     })
-    const mockReplyDraftsBuilder = {
+    // drafts テーブルのみ使用（user_id 直接チェック）
+    const mockDraftsBuilder = {
       update: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      in: vi.fn().mockReturnThis(),
       single: mockSingle,
     }
     mockCreateClient.mockResolvedValue({
@@ -202,15 +192,7 @@ describe('POST /api/drafts/[id]/approve', () => {
           error: null,
         }),
       },
-      from: vi.fn().mockImplementation((table: string) => {
-        if (table === 'x_accounts') {
-          return {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockResolvedValue({ data: [{ id: 'account-1' }], error: null }),
-          }
-        }
-        return mockReplyDraftsBuilder
-      }),
+      from: vi.fn().mockReturnValue(mockDraftsBuilder),
     } as any)
 
     mockPostTweet.mockResolvedValue({ id: 'tweet-456', text: 'Hello' })
@@ -233,11 +215,11 @@ describe('POST /api/drafts/[id]/approve', () => {
     // Arrange
     const pendingDraft = { id: 'draft-1', content: 'Hello', status: 'pending' }
     const mockUpdate = vi.fn().mockReturnThis()
-    const mockReplyDraftsBuilder = {
+    // drafts テーブルのみ使用（user_id 直接チェック）
+    const mockDraftsBuilder = {
       update: mockUpdate,
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      in: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({ data: pendingDraft, error: null }),
     }
     mockCreateClient.mockResolvedValue({
@@ -247,15 +229,7 @@ describe('POST /api/drafts/[id]/approve', () => {
           error: null,
         }),
       },
-      from: vi.fn().mockImplementation((table: string) => {
-        if (table === 'x_accounts') {
-          return {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockResolvedValue({ data: [{ id: 'account-1' }], error: null }),
-          }
-        }
-        return mockReplyDraftsBuilder
-      }),
+      from: vi.fn().mockReturnValue(mockDraftsBuilder),
     } as any)
 
     mockPostTweet.mockRejectedValue(new Error('X API connection failed'))

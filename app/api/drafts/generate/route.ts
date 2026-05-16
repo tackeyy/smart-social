@@ -63,32 +63,34 @@ export async function POST(request: Request) {
       body.instruction
     )
 
-    // reply_drafts に INSERT
+    // 3候補を ai_candidates JSONB 配列に格納し、1レコードで管理（旧: 3レコードに分割）
     const now = new Date().toISOString()
-    const { data: insertedDrafts, error: insertError } = await supabase
-      .from('reply_drafts')
-      .insert(
-        candidates.map((text: string) => ({
-          x_account_id: body.x_account_id,
-          source_tweet_url: body.source_tweet_url,
-          source_tweet_text: body.source_tweet_text,
-          content: text,
-          status: 'pending',
-          draft_candidates: [
-            {
-              text,
-              generated_by: 'claude-sonnet-4-6',
-              created_at: now,
-            },
-          ],
-        }))
-      )
+    const { data: insertedDraft, error: insertError } = await supabase
+      .from('drafts')
+      .insert({
+        user_id: user.id,
+        x_account_id: body.x_account_id,
+        type: 'reply',
+        content: candidates[0],  // デフォルトは候補0番
+        source_tweet_id: body.source_tweet_url?.split('/').pop() ?? '',
+        source_tweet_text: body.source_tweet_text ?? body.source_tweet_url,
+        ai_candidates: candidates.map((text: string) => ({
+          text,
+          generated_by: 'claude-sonnet-4-6',
+          created_at: now,
+        })),
+        selected_index: 0,
+        status: 'pending',
+      })
+      .select()
+      .single()
 
     if (insertError) {
       return NextResponse.json({ error: insertError.message }, { status: 500 })
     }
 
-    return NextResponse.json({ drafts: insertedDrafts })
+    // レスポンスは配列形式を維持して後方互換性を保つ
+    return NextResponse.json({ drafts: insertedDraft ? [insertedDraft] : [] })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to generate drafts'
     return NextResponse.json({ error: message }, { status: 500 })

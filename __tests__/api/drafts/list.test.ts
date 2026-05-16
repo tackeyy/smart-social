@@ -54,28 +54,18 @@ describe('GET /api/drafts', () => {
     )
   })
 
-  it('認証済みの場合はreply_drafts一覧を返す', async () => {
+  it('認証済みの場合はdrafts(type=reply)一覧を返す', async () => {
     // Arrange
     const mockDrafts = [
-      { id: 'draft-1', source_tweet_id: 'tweet-1', x_account_id: 1, created_at: '2024-01-01' },
-      { id: 'draft-2', source_tweet_id: 'tweet-2', x_account_id: 1, created_at: '2024-01-02' },
+      { id: 'draft-1', type: 'reply', source_tweet_id: 'tweet-1', x_account_id: 1, created_at: '2024-01-01' },
+      { id: 'draft-2', type: 'reply', source_tweet_id: 'tweet-2', x_account_id: 1, created_at: '2024-01-02' },
     ]
-    const mockAccounts = [{ id: 1 }]
 
-    const mockFrom = vi.fn().mockImplementation((table: string) => {
-      if (table === 'x_accounts') {
-        return {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockResolvedValue({ data: mockAccounts, error: null }),
-        }
-      }
-      // reply_drafts
-      return {
-        select: vi.fn().mockReturnThis(),
-        in: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({ data: mockDrafts, error: null }),
-      }
-    })
+    const mockQueryBuilder = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({ data: mockDrafts, error: null }),
+    }
 
     mockCreateClient.mockResolvedValue({
       auth: {
@@ -84,7 +74,7 @@ describe('GET /api/drafts', () => {
           error: null,
         }),
       },
-      from: mockFrom,
+      from: vi.fn().mockReturnValue(mockQueryBuilder),
     } as any)
 
     const request = new Request('http://localhost/api/drafts')
@@ -92,32 +82,21 @@ describe('GET /api/drafts', () => {
     // Act
     await GET(request)
 
-    // Assert
+    // Assert: type='reply' で絞り込まれること
+    expect(mockQueryBuilder.eq).toHaveBeenCalledWith('type', 'reply')
     expect(mockNextResponseJson).toHaveBeenCalledWith(mockDrafts)
   })
 
-  it('?status=pendingで絞り込まれたreply_draftsを返す', async () => {
+  it('?status=pendingで絞り込まれたdraftsを返す', async () => {
     // Arrange
     const pendingDrafts = [
-      { id: 'draft-1', source_tweet_id: 'tweet-1', x_account_id: 1, created_at: '2024-01-01' },
+      { id: 'draft-1', type: 'reply', source_tweet_id: 'tweet-1', x_account_id: 1, created_at: '2024-01-01' },
     ]
-    const mockAccounts = [{ id: 1 }]
-    const mockReplyDraftsQueryBuilder = {
+    const mockDraftsQueryBuilder = {
       select: vi.fn().mockReturnThis(),
-      in: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       order: vi.fn().mockResolvedValue({ data: pendingDrafts, error: null }),
     }
-
-    const mockFrom = vi.fn().mockImplementation((table: string) => {
-      if (table === 'x_accounts') {
-        return {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockResolvedValue({ data: mockAccounts, error: null }),
-        }
-      }
-      return mockReplyDraftsQueryBuilder
-    })
 
     mockCreateClient.mockResolvedValue({
       auth: {
@@ -126,7 +105,7 @@ describe('GET /api/drafts', () => {
           error: null,
         }),
       },
-      from: mockFrom,
+      from: vi.fn().mockReturnValue(mockDraftsQueryBuilder),
     } as any)
 
     const request = new Request('http://localhost/api/drafts?status=pending')
@@ -135,7 +114,7 @@ describe('GET /api/drafts', () => {
     await GET(request)
 
     // Assert
-    expect(mockReplyDraftsQueryBuilder.eq).toHaveBeenCalledWith('status', 'pending')
+    expect(mockDraftsQueryBuilder.eq).toHaveBeenCalledWith('status', 'pending')
     expect(mockNextResponseJson).toHaveBeenCalledWith(pendingDrafts)
   })
 })
