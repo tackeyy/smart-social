@@ -64,6 +64,8 @@ export async function POST(request: Request) {
     )
 
     // 3候補を ai_candidates JSONB 配列に格納し、1レコードで管理（旧: 3レコードに分割）
+    const sourceTweetIdMatch = body.source_tweet_url?.match(/\/status\/(\d{1,20})(?:[?#].*)?$/)
+    const source_tweet_id = sourceTweetIdMatch?.[1] ?? ''
     const now = new Date().toISOString()
     const { data: insertedDraft, error: insertError } = await supabase
       .from('drafts')
@@ -72,7 +74,7 @@ export async function POST(request: Request) {
         x_account_id: body.x_account_id,
         type: 'reply',
         content: candidates[0],  // デフォルトは候補0番
-        source_tweet_id: body.source_tweet_url?.split('/').pop() ?? '',
+        source_tweet_id,
         source_tweet_text: body.source_tweet_text ?? body.source_tweet_url,
         ai_candidates: candidates.map((text: string) => ({
           text,

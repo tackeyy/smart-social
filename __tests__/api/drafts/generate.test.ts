@@ -383,6 +383,80 @@ describe('POST /api/drafts/generate', () => {
     )
   })
 
+  it('source_tweet_url にクエリパラメータが含まれても tweet_id のみ抽出する', async () => {
+    // Arrange
+    const mockProfile = {
+      id: 'profile-1',
+      x_account_id: 'account-1',
+      profile_data: { tone: 'casual' },
+    }
+
+    mockGenerateDraftCandidates.mockResolvedValue(['候補1', '候補2', '候補3'])
+
+    const mockInsert = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: { id: 'draft-1', content: '候補1', status: 'pending' },
+        error: null,
+      }),
+    })
+
+    mockCreateClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1' } },
+          error: null,
+        }),
+      },
+      from: vi.fn().mockImplementation((table: string) => {
+        if (table === 'x_accounts') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: { id: 'account-1', user_id: 'user-1' },
+              error: null,
+            }),
+          }
+        }
+        if (table === 'style_profiles') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({ data: mockProfile, error: null }),
+          }
+        }
+        if (table === 'drafts') {
+          return { insert: mockInsert }
+        }
+        return { from: vi.fn() }
+      }),
+    } as any)
+
+    // クエリパラメータ付きURLで POST
+    const request = new Request('http://localhost/api/drafts/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        x_account_id: 'account-1',
+        source_tweet_url: 'https://x.com/user/status/98765?foo=bar',
+      }),
+    })
+
+    // Act
+    await POST(request)
+
+    // Assert: INSERT に渡された source_tweet_id が純粋な数字のみであること
+    expect(mockInsert).toHaveBeenCalledOnce()
+    const insertArg = mockInsert.mock.calls[0][0] as { source_tweet_id: string }
+    expect(insertArg.source_tweet_id).toBe('98765')
+    expect(insertArg.source_tweet_id).not.toContain('?')
+    expect(insertArg.source_tweet_id).not.toContain('#')
+    expect(insertArg.source_tweet_id).toMatch(/^\d+$/)
+  })
+
   it('異常系: リクエストボディが不正な場合は400を返す', async () => {
     // Arrange
     mockCreateClient.mockResolvedValue({
