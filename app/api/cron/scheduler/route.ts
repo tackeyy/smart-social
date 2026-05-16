@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'crypto'
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { postTweet } from '@/lib/x/client'
@@ -5,7 +6,15 @@ import { postTweet } from '@/lib/x/client'
 // Vercel Cron から毎分呼び出される
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+
+  // タイミング攻撃対策: timingSafeEqual で定数時間比較
+  const secret = process.env.CRON_SECRET ?? ''
+  const incoming = authHeader?.replace('Bearer ', '') ?? ''
+  const isValid = incoming.length > 0 &&
+    incoming.length === secret.length &&
+    timingSafeEqual(Buffer.from(incoming), Buffer.from(secret))
+
+  if (!isValid) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -16,14 +25,19 @@ export async function GET(request: Request) {
 
   const now = new Date().toISOString()
 
+  // アトミックに status='pending' → 'processing' へ更新し、
+  // 返ってきた行のみ処理する（Vercel Cron 二重実行による二重投稿防止）
   const { data: posts, error } = await supabase
     .from('scheduled_posts')
-    .select('*, drafts(*)')
+    .update({ status: 'processing' })
     .eq('status', 'pending')
     .lte('scheduled_at', now)
+    .lt('retry_count', 3)
+    .select('*, drafts(*)')
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error('Cron scheduler error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 
   const results: Array<{ id: string; status: string; error?: string }> = []
@@ -32,16 +46,33 @@ export async function GET(request: Request) {
     const text = post.drafts?.content ?? ''
     try {
       const tweet = await postTweet({ text })
-      await supabase
+
+      const { error: updateError } = await supabase
         .from('scheduled_posts')
         .update({ status: 'posted', posted_tweet_id: tweet.id, posted_at: new Date().toISOString() })
         .eq('id', post.id)
+
+      if (updateError) {
+        console.error('Tweet posted but DB update failed:', {
+          tweetId: tweet.id,
+          postId: post.id,
+          error: updateError,
+        })
+        // processing のままデッドロックを避けるため pending に戻す
+        await supabase
+          .from('scheduled_posts')
+          .update({ status: 'pending', last_error: 'DB sync failed after tweet posted' })
+          .eq('id', post.id)
+        results.push({ id: post.id, status: 'failed' })
+        continue
+      }
+
       results.push({ id: post.id, status: 'posted' })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error'
       const currentCount = post.retry_count ?? 0
       const newCount = currentCount + 1
-      const newStatus = newCount >= 3 ? 'failed' : post.status
+      const newStatus = newCount >= 3 ? 'failed' : 'pending'
       await supabase
         .from('scheduled_posts')
         .update({ retry_count: newCount, last_error: message, status: newStatus })
