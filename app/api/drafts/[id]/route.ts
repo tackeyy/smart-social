@@ -7,6 +7,12 @@ export async function GET(
 ) {
   const { id } = await params
   const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
+  }
+
   const { data, error } = await supabase
     .from('drafts')
     .select('*')
@@ -26,6 +32,12 @@ export async function PATCH(
 ) {
   const { id } = await params
   const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
+  }
+
   const body = await request.json()
 
   const { data, error } = await supabase
@@ -48,6 +60,12 @@ export async function DELETE(
 ) {
   const { id } = await params
   const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
+  }
+
   const { error } = await supabase.from('drafts').delete().eq('id', id)
 
   if (error) {
