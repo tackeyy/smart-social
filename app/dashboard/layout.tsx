@@ -64,6 +64,12 @@ export default async function DashboardLayout({
                 スケジュール
               </Link>
               <Link
+                href="/dashboard/analytics"
+                className="text-sm text-gray-600 hover:text-gray-900"
+              >
+                分析
+              </Link>
+              <Link
                 href="/dashboard/accounts"
                 className="text-sm text-gray-600 hover:text-gray-900"
               >
