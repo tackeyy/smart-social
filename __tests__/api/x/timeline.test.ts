@@ -150,7 +150,7 @@ describe('GET /api/x/timeline', () => {
     )
   })
 
-  it('X APIが失敗した場合は422を返す', async () => {
+  it('X APIが失敗した場合は502を返す', async () => {
     // Arrange
     mockCreateClient.mockResolvedValue({
       auth: {
@@ -185,7 +185,30 @@ describe('GET /api/x/timeline', () => {
     // Assert
     expect(mockNextResponseJson).toHaveBeenCalledWith(
       expect.objectContaining({ error: expect.any(String) }),
-      { status: 422 }
+      { status: 502 }
+    )
+  })
+
+  it('不正な pagination_token が指定された場合は400を返す', async () => {
+    mockCreateClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null }),
+      },
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({
+          data: [{ x_user_id: 'x-user-123', access_token: 'token-abc' }],
+          error: null,
+        }),
+      }),
+    } as any)
+
+    const request = new Request('http://localhost/api/x/timeline?pagination_token=<script>alert(1)</script>')
+    await GET(request)
+
+    expect(mockNextResponseJson).toHaveBeenCalledWith(
+      { error: '無効な pagination_token です' },
+      { status: 400 }
     )
   })
 
