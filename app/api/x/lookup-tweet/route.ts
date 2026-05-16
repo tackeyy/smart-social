@@ -1,0 +1,44 @@
+import { NextResponse } from 'next/server'
+
+const X_API_BASE = 'https://api.x.com/2'
+const TWEET_URL_PATTERN = /(?:https?:\/\/)?(?:x|twitter)\.com\/\S+\/status\/(\d+)/
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const tweetUrl = searchParams.get('url')
+
+  if (!tweetUrl) {
+    return NextResponse.json({ error: 'url is required' }, { status: 400 })
+  }
+
+  const bearerToken = process.env.X_BEARER_TOKEN
+  if (!bearerToken) {
+    return NextResponse.json({ error: 'X_BEARER_TOKEN not configured' }, { status: 500 })
+  }
+
+  const match = tweetUrl.match(TWEET_URL_PATTERN)
+  if (!match) {
+    return NextResponse.json({ error: 'Invalid tweet URL' }, { status: 400 })
+  }
+
+  const tweetId = match[1]
+
+  const res = await fetch(
+    `${X_API_BASE}/tweets/${tweetId}?tweet.fields=text,author_id`,
+    { headers: { Authorization: `Bearer ${bearerToken}` } }
+  )
+
+  const json = await res.json()
+
+  if (!res.ok) {
+    const message = json.errors?.[0]?.message ?? `X API error: ${res.status}`
+    const status = res.status === 404 ? 404 : 502
+    return NextResponse.json({ error: message }, { status })
+  }
+
+  return NextResponse.json({
+    tweet_id: json.data.id,
+    text: json.data.text,
+    author_id: json.data.author_id ?? null,
+  })
+}
