@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 // next/server の NextResponse をモック
 vi.mock('next/server', () => ({
@@ -49,6 +49,11 @@ const mockGenerateStyleProfile = vi.mocked(generateStyleProfile)
 describe('POST /api/profile/generate', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    vi.stubEnv('X_BEARER_TOKEN', 'test-bearer-token')
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
   })
 
   it('未認証の場合は401を返す', async () => {
