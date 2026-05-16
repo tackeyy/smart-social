@@ -6,7 +6,12 @@ import { GenerateProfileButton } from '@/components/GenerateProfileButton'
 import type { XAccount } from '@/types/app'
 import type { StyleProfile } from '@/lib/claude/client'
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ account_id?: string }>
+}) {
+  const params = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -20,11 +25,15 @@ export default async function SettingsPage() {
 
   const xAccounts = (accounts ?? []) as XAccount[]
 
-  const { data: profileRow } = xAccounts.length > 0
+  const selectedId = params.account_id ? parseInt(params.account_id, 10) : null
+  const currentAccount =
+    (selectedId ? xAccounts.find((a) => a.id === selectedId) : null) ?? xAccounts[0]
+
+  const { data: profileRow } = currentAccount
     ? await supabase
         .from('style_profiles')
         .select('profile_data, analyzed_at')
-        .eq('x_account_id', xAccounts[0].id)
+        .eq('x_account_id', currentAccount.id)
         .single()
     : { data: null }
 
@@ -83,7 +92,7 @@ export default async function SettingsPage() {
                 過去のツイートから自動生成された文体の特徴です。AI返信案の生成に使用されます。
               </CardDescription>
             </div>
-            <GenerateProfileButton />
+            {currentAccount && <GenerateProfileButton xAccountId={currentAccount.id} />}
           </div>
         </CardHeader>
         <CardContent>

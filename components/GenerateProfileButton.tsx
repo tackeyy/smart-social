@@ -4,22 +4,31 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 
-export function GenerateProfileButton() {
+interface GenerateProfileButtonProps {
+  xAccountId?: number
+}
+
+export function GenerateProfileButton({ xAccountId }: GenerateProfileButtonProps) {
   const [generating, setGenerating] = useState(false)
 
   async function handleClick() {
     setGenerating(true)
     try {
-      const accountRes = await fetch('/smart-social/api/accounts')
-      if (!accountRes.ok) throw new Error('アカウント情報の取得に失敗しました')
-      const accounts = await accountRes.json()
-      if (!accounts || accounts.length === 0) throw new Error('Xアカウントが見つかりません')
-      const xAccountId = String(accounts[0].id)
+      let accountId: string
+      if (xAccountId !== undefined) {
+        accountId = String(xAccountId)
+      } else {
+        const accountRes = await fetch('/smart-social/api/accounts')
+        if (!accountRes.ok) throw new Error('アカウント情報の取得に失敗しました')
+        const accounts = await accountRes.json()
+        if (!accounts || accounts.length === 0) throw new Error('Xアカウントが見つかりません')
+        accountId = String(accounts[0].id)
+      }
 
       const res = await fetch('/smart-social/api/profile/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ x_account_id: xAccountId }),
+        body: JSON.stringify({ x_account_id: accountId }),
       })
 
       if (!res.ok) {
