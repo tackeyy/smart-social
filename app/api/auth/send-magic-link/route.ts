@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
   }
 
-  const { origin } = new URL(request.url)
+  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin
   const supabase = await createClient()
   const { error } = await supabase.auth.signInWithOtp({
     email,
