@@ -16,11 +16,13 @@ import { Textarea } from '@/components/ui/textarea'
 import type { Draft, DraftStatus, XAccount } from '@/types/app'
 
 const STATUS_TABS: { value: DraftStatus | 'all'; label: string }[] = [
-  { value: 'pending', label: '承認待ち' },
-  { value: 'approved', label: '承認済み' },
-  { value: 'rejected', label: '却下' },
-  { value: 'posted', label: '投稿済み' },
-  { value: 'all', label: 'すべて' },
+  { value: 'pending',    label: '承認待ち' },
+  { value: 'approved',   label: '承認済み' },
+  { value: 'scheduled',  label: 'スケジュール済み' },
+  { value: 'posted',     label: '投稿済み' },
+  { value: 'rejected',   label: '却下' },
+  { value: 'failed',     label: '投稿失敗' },
+  { value: 'all',        label: 'すべて' },
 ]
 
 interface GenerateFormState {

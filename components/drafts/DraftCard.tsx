@@ -9,10 +9,13 @@ import { Textarea } from '@/components/ui/textarea'
 import type { Draft, DraftStatus } from '@/types/app'
 
 const STATUS_LABEL: Record<DraftStatus, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  pending: { label: '承認待ち', variant: 'secondary' },
-  approved: { label: '承認済み', variant: 'default' },
-  rejected: { label: '却下', variant: 'destructive' },
-  posted: { label: '投稿済み', variant: 'outline' },
+  pending:    { label: '承認待ち',       variant: 'secondary' },
+  approved:   { label: '承認済み',       variant: 'default' },
+  scheduled:  { label: 'スケジュール済み', variant: 'default' },
+  processing: { label: '処理中',         variant: 'secondary' },
+  posted:     { label: '投稿済み',       variant: 'outline' },
+  rejected:   { label: '却下',           variant: 'destructive' },
+  failed:     { label: '投稿失敗',       variant: 'destructive' },
 }
 
 const MAX_CHARS = 280
