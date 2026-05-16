@@ -17,7 +17,6 @@ import type { Draft, DraftStatus, XAccount } from '@/types/app'
 
 const STATUS_TABS: { value: DraftStatus | 'all'; label: string }[] = [
   { value: 'pending',    label: '承認待ち' },
-  { value: 'approved',   label: '承認済み' },
   { value: 'scheduled',  label: 'スケジュール済み' },
   { value: 'posted',     label: '投稿済み' },
   { value: 'rejected',   label: '却下' },

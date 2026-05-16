@@ -11,7 +11,6 @@ import { detectExternalLink } from '@/lib/utils/detectExternalLink'
 
 const STATUS_LABEL: Record<DraftStatus, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; description?: string }> = {
   pending:    { label: '承認待ち',        variant: 'secondary' },
-  approved:   { label: '承認済み',        variant: 'outline' },
   scheduled:  { label: 'スケジュール済み', variant: 'default',     description: '指定日時に自動投稿されます' },
   processing: { label: '処理中',          variant: 'secondary',   description: '投稿処理が進行中です。しばらくお待ちください' },
   posted:     { label: '投稿済み',        variant: 'outline' },
