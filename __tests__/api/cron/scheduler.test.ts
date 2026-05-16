@@ -71,20 +71,19 @@ describe('GET /api/cron/scheduler', () => {
       { id: 'post-1', status: 'pending', drafts: { content: 'Hello' } },
       { id: 'post-2', status: 'pending', drafts: { content: 'World' } },
     ]
-    const mockFrom = vi.fn().mockReturnValue({
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      lte: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      resolves: undefined,
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ data: { id: 'tweet-1', text: 'Hello' } }),
     })
-    const mockSupabaseSelect = {
+    const mockQueryBuilder = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       lte: vi.fn().mockResolvedValue({ data: mockPosts, error: null }),
+      update: vi.fn().mockReturnThis(),
     }
     mockCreateClient.mockReturnValue({
-      from: vi.fn().mockReturnValue(mockSupabaseSelect),
+      from: vi.fn().mockReturnValue(mockQueryBuilder),
     } as any)
 
     const request = new Request('http://localhost/api/cron/scheduler', {

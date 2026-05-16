@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { postTweet } from '@/lib/x/client'
 
 // Vercel Cron から毎分呼び出される
 export async function GET(request: Request) {
@@ -15,7 +16,6 @@ export async function GET(request: Request) {
 
   const now = new Date().toISOString()
 
-  // 投稿予定時刻を過ぎた pending な投稿を取得
   const { data: posts, error } = await supabase
     .from('scheduled_posts')
     .select('*, drafts(*)')
@@ -26,8 +26,29 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  // TODO: Phase 2 で X API 投稿処理を実装
-  const results = posts?.map((post) => ({ id: post.id, status: 'skipped' })) ?? []
+  const results: Array<{ id: string; status: string; error?: string }> = []
+
+  for (const post of posts ?? []) {
+    const text = post.drafts?.content ?? ''
+    try {
+      const tweet = await postTweet({ text })
+      await supabase
+        .from('scheduled_posts')
+        .update({ status: 'posted', posted_tweet_id: tweet.id, posted_at: new Date().toISOString() })
+        .eq('id', post.id)
+      results.push({ id: post.id, status: 'posted' })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      const currentCount = post.retry_count ?? 0
+      const newCount = currentCount + 1
+      const newStatus = newCount >= 3 ? 'failed' : post.status
+      await supabase
+        .from('scheduled_posts')
+        .update({ retry_count: newCount, last_error: message, status: newStatus })
+        .eq('id', post.id)
+      results.push({ id: post.id, status: newStatus, error: message })
+    }
+  }
 
   return NextResponse.json({ processed: results.length, results })
 }
