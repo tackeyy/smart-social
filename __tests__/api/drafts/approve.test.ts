@@ -35,15 +35,8 @@ function makeParams(id: string) {
 }
 
 /**
- * 現在の実装 (app/api/drafts/[id]/approve/route.ts) は認証・X API呼び出しを持たない。
- * これらのテストは TDD の Red フェーズとして、実装が完了するまで失敗し続ける。
- *
- * 期待する実装フロー:
- * 1. auth.getUser() でユーザー認証チェック → 未認証は401
- * 2. drafts テーブルから id で1件取得 → 存在しない場合は404
- * 3. status === 'posted' なら409
- * 4. postTweet() を呼び出し → 失敗なら422、DBはpendingのまま
- * 5. 成功したら status=posted, posted_tweet_id を更新して返す
+ * approve/route.ts は reply_drafts テーブルを x_account_id 経由で所有権確認する。
+ * from('x_accounts') → x_account_ids 取得 → from('reply_drafts').in('x_account_id', ids) のフロー。
  */
 describe('POST /api/drafts/[id]/approve', () => {
   beforeEach(() => {
@@ -60,6 +53,7 @@ describe('POST /api/drafts/[id]/approve', () => {
         update: vi.fn().mockReturnThis(),
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({ data: null, error: null }),
       }),
     } as any)
@@ -71,7 +65,7 @@ describe('POST /api/drafts/[id]/approve', () => {
     // Act
     await POST(request, makeParams('draft-1'))
 
-    // Assert: 認証チェックがない実装では401が返らないのでFailする（Red）
+    // Assert
     expect(mockNextResponseJson).toHaveBeenCalledWith(
       { error: 'Unauthorized' },
       { status: 401 }
@@ -79,7 +73,17 @@ describe('POST /api/drafts/[id]/approve', () => {
   })
 
   it('存在しないidの場合は404を返す', async () => {
-    // Arrange: Supabase が PGRST116 エラーを返す（行が見つからない）
+    // Arrange: x_accounts は空を返し、reply_drafts は PGRST116 エラーを返す
+    const mockQueryBuilder = {
+      update: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: null,
+        error: { code: 'PGRST116', message: 'Row not found' },
+      }),
+    }
     mockCreateClient.mockResolvedValue({
       auth: {
         getUser: vi.fn().mockResolvedValue({
@@ -87,15 +91,7 @@ describe('POST /api/drafts/[id]/approve', () => {
           error: null,
         }),
       },
-      from: vi.fn().mockReturnValue({
-        update: vi.fn().mockReturnThis(),
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: null,
-          error: { code: 'PGRST116', message: 'Row not found' },
-        }),
-      }),
+      from: vi.fn().mockReturnValue(mockQueryBuilder),
     } as any)
 
     const request = new Request('http://localhost/api/drafts/non-existent/approve', {
@@ -105,7 +101,7 @@ describe('POST /api/drafts/[id]/approve', () => {
     // Act
     await POST(request, makeParams('non-existent'))
 
-    // Assert: 存在チェックがない実装では404が返らないのでFailする（Red）
+    // Assert
     expect(mockNextResponseJson).toHaveBeenCalledWith(
       { error: 'Not Found' },
       { status: 404 }
@@ -113,13 +109,22 @@ describe('POST /api/drafts/[id]/approve', () => {
   })
 
   it('既にpostedのドラフトは409を返す', async () => {
-    // Arrange: すでにpostedのドラフトをDBが返す
+    // Arrange: x_accounts から account を返し、reply_drafts からpostedドラフトを返す
     const postedDraft = {
       id: 'draft-1',
       content: 'Hello',
       status: 'posted',
       posted_tweet_id: 'tweet-123',
     }
+    const mockQueryBuilder = {
+      update: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: postedDraft, error: null }),
+    }
+    // x_accounts の from 呼び出しは accounts を返す
+    let fromCallCount = 0
     mockCreateClient.mockResolvedValue({
       auth: {
         getUser: vi.fn().mockResolvedValue({
@@ -127,11 +132,14 @@ describe('POST /api/drafts/[id]/approve', () => {
           error: null,
         }),
       },
-      from: vi.fn().mockReturnValue({
-        update: vi.fn().mockReturnThis(),
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data: postedDraft, error: null }),
+      from: vi.fn().mockImplementation((table: string) => {
+        if (table === 'x_accounts') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockResolvedValue({ data: [{ id: 'account-1' }], error: null }),
+          }
+        }
+        return mockQueryBuilder
       }),
     } as any)
 
@@ -142,7 +150,7 @@ describe('POST /api/drafts/[id]/approve', () => {
     // Act
     await POST(request, makeParams('draft-1'))
 
-    // Assert: statusチェックがない実装では409が返らないのでFailする（Red）
+    // Assert
     expect(mockNextResponseJson).toHaveBeenCalledWith(
       { error: 'Already posted' },
       { status: 409 }
@@ -165,10 +173,11 @@ describe('POST /api/drafts/[id]/approve', () => {
       if (selectCallCount === 1) return Promise.resolve({ data: pendingDraft, error: null })
       return Promise.resolve({ data: updatedDraft, error: null })
     })
-    const mockQueryBuilder = {
+    const mockReplyDraftsBuilder = {
       update: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
       single: mockSingle,
     }
     mockCreateClient.mockResolvedValue({
@@ -178,7 +187,15 @@ describe('POST /api/drafts/[id]/approve', () => {
           error: null,
         }),
       },
-      from: vi.fn().mockReturnValue(mockQueryBuilder),
+      from: vi.fn().mockImplementation((table: string) => {
+        if (table === 'x_accounts') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockResolvedValue({ data: [{ id: 'account-1' }], error: null }),
+          }
+        }
+        return mockReplyDraftsBuilder
+      }),
     } as any)
 
     mockPostTweet.mockResolvedValue({ id: 'tweet-456', text: 'Hello' })
@@ -190,7 +207,7 @@ describe('POST /api/drafts/[id]/approve', () => {
     // Act
     await POST(request, makeParams('draft-1'))
 
-    // Assert: X API呼び出しと posted_tweet_id 設定がない実装ではFailする（Red）
+    // Assert
     expect(mockPostTweet).toHaveBeenCalledWith({ text: 'Hello' })
     expect(mockNextResponseJson).toHaveBeenCalledWith(
       expect.objectContaining({ status: 'posted', posted_tweet_id: 'tweet-456' })
@@ -201,10 +218,11 @@ describe('POST /api/drafts/[id]/approve', () => {
     // Arrange
     const pendingDraft = { id: 'draft-1', content: 'Hello', status: 'pending' }
     const mockUpdate = vi.fn().mockReturnThis()
-    const mockQueryBuilder = {
+    const mockReplyDraftsBuilder = {
       update: mockUpdate,
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({ data: pendingDraft, error: null }),
     }
     mockCreateClient.mockResolvedValue({
@@ -214,7 +232,15 @@ describe('POST /api/drafts/[id]/approve', () => {
           error: null,
         }),
       },
-      from: vi.fn().mockReturnValue(mockQueryBuilder),
+      from: vi.fn().mockImplementation((table: string) => {
+        if (table === 'x_accounts') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockResolvedValue({ data: [{ id: 'account-1' }], error: null }),
+          }
+        }
+        return mockReplyDraftsBuilder
+      }),
     } as any)
 
     mockPostTweet.mockRejectedValue(new Error('X API connection failed'))
@@ -226,7 +252,7 @@ describe('POST /api/drafts/[id]/approve', () => {
     // Act
     await POST(request, makeParams('draft-1'))
 
-    // Assert: X API失敗時の422ハンドリングがない実装ではFailする（Red）
+    // Assert
     expect(mockNextResponseJson).toHaveBeenCalledWith(
       expect.objectContaining({ error: expect.any(String) }),
       { status: 422 }
