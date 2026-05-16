@@ -23,7 +23,7 @@ export function AccountSelector({ accounts, currentAccountId }: AccountSelectorP
 
   if (accounts.length === 1) {
     return (
-      <span className="text-sm text-gray-600">@{accounts[0].x_username}</span>
+      <span className="text-sm text-gray-600">@{accounts[0].screen_name}</span>
     )
   }
 
@@ -44,7 +44,7 @@ export function AccountSelector({ accounts, currentAccountId }: AccountSelectorP
       <SelectContent>
         {accounts.map((account) => (
           <SelectItem key={account.id} value={String(account.id)}>
-            @{account.x_username}
+            @{account.screen_name}
           </SelectItem>
         ))}
       </SelectContent>
