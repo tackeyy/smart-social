@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
@@ -22,7 +23,10 @@ function formatRate(rate: number): string {
   return `${rate.toFixed(2)}%`
 }
 
-export default function AnalyticsPage() {
+function AnalyticsContent() {
+  const searchParams = useSearchParams()
+  const accountId = searchParams.get('account_id')
+
   const [metrics, setMetrics] = useState<TweetMetrics[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -33,8 +37,9 @@ export default function AnalyticsPage() {
         setLoading(true)
         setError(null)
 
-        // x_account_id は未指定で先頭アカウントを使用
-        const res = await fetch('/smart-social/api/analytics?max_results=20')
+        const params = new URLSearchParams({ max_results: '20' })
+        if (accountId) params.set('x_account_id', accountId)
+        const res = await fetch(`/smart-social/api/analytics?${params.toString()}`)
         if (!res.ok) {
           const body = (await res.json()) as { error?: string }
           throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -170,5 +175,13 @@ export default function AnalyticsPage() {
         </>
       )}
     </div>
+  )
+}
+
+export default function AnalyticsPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-gray-500">データを取得中...</p>}>
+      <AnalyticsContent />
+    </Suspense>
   )
 }
