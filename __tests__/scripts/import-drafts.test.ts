@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 // Supabase クライアントをモック
 vi.mock('@supabase/supabase-js', () => ({
@@ -37,6 +37,11 @@ const mockReaddir = vi.mocked(readdir)
 describe('import-drafts', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key'
+  })
+
+  afterEach(() => {
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY
   })
 
   describe('parseMdFile (MDファイルのパース)', () => {
@@ -59,7 +64,7 @@ describe('import-drafts', () => {
 - [ ] **リプライ案**: 「2件目のドラフト」
 `
 
-      mockReadFile.mockResolvedValue(mdContent as unknown as Buffer)
+      mockReadFile.mockResolvedValue(mdContent)
 
       // 実装: import { parseMdFile } from '@/scripts/import-drafts'
       const { parseMdFile } = await import('@/scripts/import-drafts')
@@ -99,7 +104,7 @@ describe('import-drafts', () => {
 
 - [ ] **リプライ案**: 「未チェックドラフト」
 `
-      mockReadFile.mockResolvedValue(mdContent as unknown as Buffer)
+      mockReadFile.mockResolvedValue(mdContent)
 
       const { parseMdFile } = await import('@/scripts/import-drafts')
 
@@ -113,7 +118,7 @@ describe('import-drafts', () => {
 
     it('エッジケース: 空のMDファイルは空配列を返す', async () => {
       // Arrange
-      mockReadFile.mockResolvedValue('' as unknown as Buffer)
+      mockReadFile.mockResolvedValue('')
 
       const { parseMdFile } = await import('@/scripts/import-drafts')
 
@@ -130,7 +135,7 @@ describe('import-drafts', () => {
 
 - **スキャン日時**: 2026-03-28T15:53:29+09:00
 `
-      mockReadFile.mockResolvedValue(mdContent as unknown as Buffer)
+      mockReadFile.mockResolvedValue(mdContent)
 
       const { parseMdFile } = await import('@/scripts/import-drafts')
 
@@ -154,7 +159,7 @@ describe('import-drafts', () => {
 - [ ] **リプライ案**: 「ドラフトテキスト」
 `
       mockReaddir.mockResolvedValue(['test.md'] as unknown as Awaited<ReturnType<typeof readdir>>)
-      mockReadFile.mockResolvedValue(mdContent as unknown as Buffer)
+      mockReadFile.mockResolvedValue(mdContent)
 
       const mockInsert = vi.fn()
       mockCreateClient.mockReturnValue({
@@ -185,7 +190,7 @@ describe('import-drafts', () => {
 - [ ] **リプライ案**: 「ドラフトテキスト」
 `
       mockReaddir.mockResolvedValue(['test.md'] as unknown as Awaited<ReturnType<typeof readdir>>)
-      mockReadFile.mockResolvedValue(mdContent as unknown as Buffer)
+      mockReadFile.mockResolvedValue(mdContent)
 
       const mockInsert = vi.fn().mockResolvedValue({ data: null, error: null })
       // 既存レコードが存在する（重複）
@@ -229,7 +234,7 @@ describe('import-drafts', () => {
 - [ ] **リプライ案**: 「2件目のドラフト」
 `
       mockReaddir.mockResolvedValue(['test.md'] as unknown as Awaited<ReturnType<typeof readdir>>)
-      mockReadFile.mockResolvedValue(mdContent as unknown as Buffer)
+      mockReadFile.mockResolvedValue(mdContent)
 
       const mockInsert = vi.fn().mockResolvedValue({ data: [{ id: 'new-id' }], error: null })
       // 既存レコードなし（重複なし）
@@ -263,7 +268,7 @@ describe('import-drafts', () => {
 - [ ] **リプライ案**: 「エラー想定ドラフト」
 `
       mockReaddir.mockResolvedValue(['test.md'] as unknown as Awaited<ReturnType<typeof readdir>>)
-      mockReadFile.mockResolvedValue(mdContent as unknown as Buffer)
+      mockReadFile.mockResolvedValue(mdContent)
 
       mockCreateClient.mockReturnValue({
         from: vi.fn().mockReturnValue({
