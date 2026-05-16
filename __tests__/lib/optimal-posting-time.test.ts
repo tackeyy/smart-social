@@ -2,10 +2,13 @@ import { describe, it, expect } from 'vitest'
 import { analyzeOptimalPostingTimes } from '@/lib/analytics/optimal-posting-time'
 import type { TweetMetrics } from '@/lib/x/analytics'
 
-function makeTweet(hour: number, score: number): TweetMetrics {
-  const d = new Date(2024, 0, 15, hour, 0, 0) // JST を想定（固定日）
+// jstHour を指定すると、それに対応する UTC ISO文字列で created_at を生成する
+function makeTweet(jstHour: number, score: number): TweetMetrics {
+  const utcHour = (jstHour - 9 + 24) % 24
+  const day = jstHour < 9 ? 14 : 15 // JST 0-8時台は前日のUTC
+  const d = new Date(Date.UTC(2024, 0, day, utcHour, 0, 0))
   return {
-    tweet_id: `${hour}-${score}`,
+    tweet_id: `${jstHour}-${score}`,
     text: 'test',
     created_at: d.toISOString(),
     like_count: 0,
