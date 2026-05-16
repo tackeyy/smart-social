@@ -9,7 +9,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       <input
         type={type}
         className={cn(
-          "flex h-10 w-full rounded bg-white px-3 py-2 text-sm text-manavi-navy",
+          "flex h-10 w-full rounded bg-white px-3 py-2 text-sm text-foreground",
           "border border-input shadow-manavi-sm",
           "placeholder:text-muted-foreground",
           "transition-shadow duration-150",
