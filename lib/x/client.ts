@@ -1,4 +1,4 @@
-import { createHmac } from 'crypto'
+import { createHmac, randomBytes } from 'crypto'
 
 // ---- エラー型 ----
 
@@ -42,7 +42,7 @@ function percentEncode(str: string): string {
 }
 
 function generateNonce(): string {
-  return Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2)
+  return randomBytes(16).toString('hex')
 }
 
 function buildOAuthHeader(method: string, url: string): string {
@@ -120,5 +120,8 @@ export async function postTweet(params: TweetParams): Promise<TweetResult> {
     throw new Error(data.errors?.[0]?.message ?? `HTTP ${response.status}`)
   }
 
-  return data.data!
+  if (!data.data) {
+    throw new Error('Unexpected API response: missing data field')
+  }
+  return data.data
 }
