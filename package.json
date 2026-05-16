@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "lint:md": "markdownlint-cli2 '**/*.md' '!node_modules'",
+    "lint:sh": "find . -name '*.sh' -not -path './node_modules/*' -print0 | xargs -0 shellcheck",
+    "lint": "npm run lint:md"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.96.0",
@@ -34,6 +37,7 @@
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.0.2",
     "jsdom": "^29.1.1",
+    "markdownlint-cli2": "^0.12.1",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.6"
