@@ -29,12 +29,17 @@ export async function GET(request: Request) {
   const maxResultsRaw = url.searchParams.get('max_results') ?? '50'
   const maxResults = Math.min(100, Math.max(1, parseInt(maxResultsRaw, 10) || 50))
 
+  const bearerToken = process.env.X_BEARER_TOKEN
+  if (!bearerToken) {
+    return NextResponse.json({ error: 'X_BEARER_TOKEN が設定されていません' }, { status: 500 })
+  }
+
   const timelineUrl = `${X_API_BASE}/users/${account.x_user_id}/tweets?max_results=${maxResults}&tweet.fields=id,text,created_at`
 
   try {
     const response = await fetch(timelineUrl, {
       headers: {
-        Authorization: `Bearer ${account.access_token}`,
+        Authorization: `Bearer ${bearerToken}`,
       },
     })
 

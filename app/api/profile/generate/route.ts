@@ -35,18 +35,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Xアカウントが見つからないか、アクセス権限がありません' }, { status: 403 })
   }
 
+  const bearerToken = process.env.X_BEARER_TOKEN
+  if (!bearerToken) {
+    return NextResponse.json({ error: 'X_BEARER_TOKEN が設定されていません' }, { status: 500 })
+  }
+
   // X API でツイート取得（最大100件）
   const timelineUrl = `${X_API_BASE}/users/${account.x_user_id}/tweets?max_results=100&tweet.fields=id,text,created_at`
   const xResponse = await fetch(timelineUrl, {
     headers: {
-      Authorization: `Bearer ${account.access_token}`,
+      Authorization: `Bearer ${bearerToken}`,
     },
   })
 
   if (!xResponse.ok) {
     const errData = await xResponse.json().catch(() => ({}))
     console.error('X API error:', xResponse.status, errData)
-    return NextResponse.json({ error: 'Failed to fetch timeline from X API' }, { status: 422 })
+    return NextResponse.json({ error: 'タイムラインの取得に失敗しました' }, { status: 422 })
   }
 
   const xData = await xResponse.json()
