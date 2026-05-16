@@ -1,0 +1,17 @@
+project_id = "rwbfafdivhzfzzwrkviy"
+
+[auth]
+site_url = "https://gyomu.ai"
+additional_redirect_urls = [
+  "https://gyomu.ai/smart-social/auth/callback",
+  "http://localhost:3000/smart-social/auth/callback"
+]
+
+[auth.email]
+enable_confirmations = true
+max_frequency = "1m0s"
+otp_length = 8
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
