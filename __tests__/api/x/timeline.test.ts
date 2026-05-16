@@ -55,7 +55,7 @@ describe('GET /api/x/timeline', () => {
 
     // Assert
     expect(mockNextResponseJson).toHaveBeenCalledWith(
-      { error: 'Unauthorized' },
+      { error: '認証が必要です' },
       { status: 401 }
     )
   })

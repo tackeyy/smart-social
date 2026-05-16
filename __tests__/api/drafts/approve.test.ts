@@ -67,7 +67,7 @@ describe('POST /api/drafts/[id]/approve', () => {
 
     // Assert
     expect(mockNextResponseJson).toHaveBeenCalledWith(
-      { error: 'Unauthorized' },
+      { error: '認証が必要です' },
       { status: 401 }
     )
   })
@@ -103,7 +103,7 @@ describe('POST /api/drafts/[id]/approve', () => {
 
     // Assert
     expect(mockNextResponseJson).toHaveBeenCalledWith(
-      { error: 'Not Found' },
+      { error: '見つかりません' },
       { status: 404 }
     )
   })
@@ -167,7 +167,7 @@ describe('POST /api/drafts/[id]/approve', () => {
 
     // Assert
     expect(mockNextResponseJson).toHaveBeenCalledWith(
-      { error: 'Already posted' },
+      { error: 'すでに投稿済みです' },
       { status: 409 }
     )
   })

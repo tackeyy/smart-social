@@ -50,7 +50,7 @@ describe('DELETE /api/accounts/[id]', () => {
 
     // Assert
     expect(mockNextResponseJson).toHaveBeenCalledWith(
-      { error: 'Unauthorized' },
+      { error: '認証が必要です' },
       { status: 401 }
     )
   })
@@ -84,7 +84,7 @@ describe('DELETE /api/accounts/[id]', () => {
 
     // Assert
     expect(mockNextResponseJson).toHaveBeenCalledWith(
-      { error: 'Not Found' },
+      { error: '見つかりません' },
       { status: 404 }
     )
   })
@@ -118,7 +118,7 @@ describe('DELETE /api/accounts/[id]', () => {
 
     // Assert
     expect(mockNextResponseJson).toHaveBeenCalledWith(
-      { error: 'Not Found' },
+      { error: '見つかりません' },
       { status: 404 }
     )
   })

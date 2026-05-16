@@ -44,7 +44,7 @@ describe('GET /api/cron/scheduler', () => {
 
     // Assert
     expect(mockNextResponseJson).toHaveBeenCalledWith(
-      { error: 'Unauthorized' },
+      { error: '認証が必要です' },
       { status: 401 }
     )
   })
@@ -60,7 +60,7 @@ describe('GET /api/cron/scheduler', () => {
 
     // Assert
     expect(mockNextResponseJson).toHaveBeenCalledWith(
-      { error: 'Unauthorized' },
+      { error: '認証が必要です' },
       { status: 401 }
     )
   })

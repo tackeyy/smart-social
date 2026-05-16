@@ -67,7 +67,7 @@ describe('POST /api/profile/generate', () => {
 
     // Assert
     expect(mockNextResponseJson).toHaveBeenCalledWith(
-      { error: 'Unauthorized' },
+      { error: '認証が必要です' },
       { status: 401 }
     )
   })

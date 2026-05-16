@@ -44,7 +44,7 @@ describe('GET /api/accounts', () => {
 
     // Assert
     expect(mockNextResponseJson).toHaveBeenCalledWith(
-      { error: 'Unauthorized' },
+      { error: '認証が必要です' },
       { status: 401 }
     )
   })
@@ -145,7 +145,7 @@ describe('POST /api/accounts', () => {
 
     // Assert
     expect(mockNextResponseJson).toHaveBeenCalledWith(
-      { error: 'Unauthorized' },
+      { error: '認証が必要です' },
       { status: 401 }
     )
   })
@@ -269,7 +269,7 @@ describe('POST /api/accounts', () => {
 
     // Assert
     expect(mockNextResponseJson).toHaveBeenCalledWith(
-      { error: 'screen_name must be alphanumeric and underscores only (max 50 chars)' },
+      { error: 'ユーザー名は半角英数字とアンダースコアのみ使用できます（50文字以内）' },
       { status: 400 }
     )
   })
@@ -300,7 +300,7 @@ describe('POST /api/accounts', () => {
 
     // Assert
     expect(mockNextResponseJson).toHaveBeenCalledWith(
-      { error: 'screen_name must be alphanumeric and underscores only (max 50 chars)' },
+      { error: 'ユーザー名は半角英数字とアンダースコアのみ使用できます（50文字以内）' },
       { status: 400 }
     )
   })
