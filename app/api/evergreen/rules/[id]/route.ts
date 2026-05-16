@@ -24,10 +24,10 @@ export async function PATCH(
     return NextResponse.json({ error: '更新項目がありません' }, { status: 400 })
   }
 
-  if ('interval_days' in updates) {
-    const intervalDays = updates.interval_days as number
-    if (intervalDays < 7 || intervalDays > 365) {
-      return NextResponse.json({ error: 'interval_days は7〜365の範囲で指定してください' }, { status: 400 })
+  const intervalDays = updates.interval_days
+  if (intervalDays !== undefined) {
+    if (typeof intervalDays !== 'number' || !Number.isInteger(intervalDays) || intervalDays < 7 || intervalDays > 365) {
+      return NextResponse.json({ error: 'interval_days は7〜365の整数で指定してください' }, { status: 400 })
     }
   }
 
