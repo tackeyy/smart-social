@@ -43,7 +43,9 @@ export async function POST(request: Request) {
     .from('style_profiles')
     .select('*')
     .eq('x_account_id', body.x_account_id)
-    .single()
+    .order('analyzed_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   if (profileError || !styleProfile) {
     return NextResponse.json(

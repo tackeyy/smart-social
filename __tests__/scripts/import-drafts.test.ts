@@ -168,7 +168,7 @@ describe('import-drafts', () => {
       const { importDrafts } = await import('@/scripts/import-drafts')
 
       // Act
-      await importDrafts('/path/to/md-dir', { dryRun: true })
+      await importDrafts('/path/to/md-dir', { dryRun: true, xAccountId: 1 })
 
       // Assert: INSERTが呼ばれていない
       expect(mockInsert).not.toHaveBeenCalled()
@@ -203,7 +203,7 @@ describe('import-drafts', () => {
       const { importDrafts } = await import('@/scripts/import-drafts')
 
       // Act
-      const result = await importDrafts('/path/to/md-dir', { dryRun: false })
+      const result = await importDrafts('/path/to/md-dir', { dryRun: false, xAccountId: 1 })
 
       // Assert: スキップされてINSERTは呼ばれない
       expect(mockInsert).not.toHaveBeenCalled()
@@ -244,7 +244,7 @@ describe('import-drafts', () => {
       const { importDrafts } = await import('@/scripts/import-drafts')
 
       // Act
-      const result = await importDrafts('/path/to/md-dir', { dryRun: false })
+      const result = await importDrafts('/path/to/md-dir', { dryRun: false, xAccountId: 1 })
 
       // Assert
       expect(result.imported).toBe(2)
@@ -276,7 +276,7 @@ describe('import-drafts', () => {
       const { importDrafts } = await import('@/scripts/import-drafts')
 
       // Act
-      const result = await importDrafts('/path/to/md-dir', { dryRun: false })
+      const result = await importDrafts('/path/to/md-dir', { dryRun: false, xAccountId: 1 })
 
       // Assert
       expect(result.errors).toBe(1)

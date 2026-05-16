@@ -59,12 +59,10 @@ export async function POST(request: Request) {
     // style_profiles に保存
     const { data: savedProfile } = await supabase
       .from('style_profiles')
-      .upsert({
-        x_account_id: body.x_account_id,
-        profile_data: profileData,
-        model_version: 'claude-sonnet-4-6',
-        analyzed_at: new Date().toISOString(),
-      })
+      .upsert(
+        { x_account_id: body.x_account_id, profile_data: profileData, model_version: 'claude-sonnet-4-6', analyzed_at: new Date().toISOString() },
+        { onConflict: 'x_account_id' }
+      )
 
     return NextResponse.json({ profile: savedProfile ?? profileData })
   } catch (err) {

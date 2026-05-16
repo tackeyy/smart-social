@@ -15,8 +15,8 @@ export async function GET(request: Request) {
 
   // x_account_id クエリパラメータ対応（省略時は先頭アカウントを使用）
   const xAccountId = url.searchParams.get('x_account_id')
-  const accountQuery = supabase.from('x_accounts').select('id, x_user_id, access_token').eq('user_id', user.id)
-  if (xAccountId) accountQuery.eq('id', xAccountId)
+  let accountQuery = supabase.from('x_accounts').select('id, x_user_id, access_token').eq('user_id', user.id)
+  if (xAccountId) accountQuery = accountQuery.eq('id', xAccountId)
   const { data: accounts } = await accountQuery
 
   if (!accounts || accounts.length === 0) {

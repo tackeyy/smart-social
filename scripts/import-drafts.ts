@@ -6,6 +6,12 @@ export interface ParsedDraft {
   draft_text: string
 }
 
+export interface ImportOptions {
+  dir: string
+  dryRun: boolean
+  xAccountId: number
+}
+
 export interface ImportResult {
   imported: number
   skipped: number
@@ -45,7 +51,7 @@ export async function parseMdFile(filePath: string): Promise<ParsedDraft[]> {
 
 export async function importDrafts(
   dir: string,
-  opts: { dryRun: boolean }
+  opts: { dryRun: boolean; xAccountId?: number }
 ): Promise<ImportResult> {
   const { readdir } = await import('fs/promises')
   const { join } = await import('path')
@@ -87,6 +93,7 @@ export async function importDrafts(
 
       const now = new Date().toISOString()
       const { error } = await supabase.from('reply_drafts').insert({
+        ...(opts.xAccountId !== undefined ? { x_account_id: opts.xAccountId } : {}),
         source_tweet_url: draft.source_tweet_url,
         draft_candidates: [
           {
@@ -106,4 +113,50 @@ export async function importDrafts(
   }
 
   return { imported, skipped, errors }
+}
+
+// ---- CLI エントリポイント ----
+
+async function main() {
+  const args = process.argv.slice(2)
+
+  let dir = '.'
+  let dryRun = false
+  let xAccountId: number | undefined
+
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--dry-run') {
+      dryRun = true
+    } else if (args[i] === '--account-id' && args[i + 1]) {
+      xAccountId = parseInt(args[i + 1], 10)
+      i++
+    } else if (!args[i].startsWith('--')) {
+      dir = args[i]
+    }
+  }
+
+  if (xAccountId === undefined) {
+    console.error('Error: --account-id is required')
+    console.error('Usage: tsx scripts/import-drafts.ts [dir] --account-id <id> [--dry-run]')
+    process.exit(1)
+  }
+
+  console.log(`Importing drafts from: ${dir}`)
+  console.log(`Dry run: ${dryRun}`)
+  console.log(`Account ID: ${xAccountId}`)
+
+  const result = await importDrafts(dir, { dryRun, xAccountId })
+
+  console.log(`\nResult:`)
+  console.log(`  Imported: ${result.imported}`)
+  console.log(`  Skipped:  ${result.skipped}`)
+  console.log(`  Errors:   ${result.errors}`)
+}
+
+// ESM環境でのエントリポイント検出
+if (typeof process !== 'undefined' && process.argv[1]?.endsWith('import-drafts.ts')) {
+  main().catch(err => {
+    console.error(err)
+    process.exit(1)
+  })
 }
