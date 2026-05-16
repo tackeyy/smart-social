@@ -35,7 +35,7 @@ export async function GET(
 
   const { data, error } = await supabase
     .from('team_members')
-    .select('*')
+    .select('team_id, user_id, role, invited_by, joined_at')
     .eq('team_id', id)
 
   if (error) {
@@ -93,7 +93,10 @@ export async function POST(
     return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 })
   }
 
-  const targetUser = usersData.users.find((u) => u.email === body.email.trim().toLowerCase())
+  const emailLower = (body.email as string).trim().toLowerCase()
+  const targetUser = usersData.users.find(
+    (u) => u.email?.toLowerCase() === emailLower
+  )
   if (!targetUser) {
     return NextResponse.json({ error: '指定されたメールアドレスのユーザーが見つかりません' }, { status: 404 })
   }
@@ -103,7 +106,10 @@ export async function POST(
     ? ['owner', 'admin', 'member']
     : ['admin', 'member']
 
-  const role = body.role && allowedRoles.includes(body.role) ? body.role : 'member'
+  if (body.role && !allowedRoles.includes(body.role)) {
+    return NextResponse.json({ error: '指定された役割を付与する権限がありません' }, { status: 403 })
+  }
+  const role = body.role ?? 'member'
 
   const { data: newMember, error: insertError } = await supabase
     .from('team_members')

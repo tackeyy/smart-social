@@ -44,10 +44,10 @@ export async function PATCH(
     .select()
     .single()
 
-  if (!updated) {
-    return NextResponse.json({ error: 'メンバーが見つかりません' }, { status: 404 })
-  }
   if (error) {
+    if (error.code === 'PGRST116') {
+      return NextResponse.json({ error: 'メンバーが見つかりません' }, { status: 404 })
+    }
     console.error('[teams/[id]/members/[userId]] patch error:', error)
     return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 })
   }
@@ -83,6 +83,20 @@ export async function DELETE(
 
   if (!isSelf && !['owner', 'admin'].includes(membership.role)) {
     return NextResponse.json({ error: 'オーナーまたは管理者のみメンバーを除名できます' }, { status: 403 })
+  }
+
+  // 除名対象のroleをチェック（adminはownerを除名できない）
+  if (membership.role === 'admin') {
+    const { data: targetMembership } = await supabase
+      .from('team_members')
+      .select('role')
+      .eq('team_id', id)
+      .eq('user_id', userId)
+      .single()
+
+    if (targetMembership?.role === 'owner') {
+      return NextResponse.json({ error: '管理者はオーナーを除名できません' }, { status: 403 })
+    }
   }
 
   // ownerが0人にならないよう防御

@@ -342,13 +342,16 @@ describe('PATCH /api/teams/[id]/members/[userId]', () => {
             }),
           }
         }
-        // update: 対象メンバー不存在で null
+        // update: 対象メンバー不存在で PGRST116 エラー
         return {
           update: vi.fn().mockReturnValue({
             eq: vi.fn().mockReturnValue({
               eq: vi.fn().mockReturnValue({
                 select: vi.fn().mockReturnValue({
-                  single: vi.fn().mockResolvedValue({ data: null, error: null }),
+                  single: vi.fn().mockResolvedValue({
+                    data: null,
+                    error: { code: 'PGRST116', message: 'Row not found' },
+                  }),
                 }),
               }),
             }),
@@ -374,9 +377,120 @@ describe('PATCH /api/teams/[id]/members/[userId]', () => {
   })
 })
 
+describe('POST /api/teams/[id]/members - role権限チェック', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
+
+  it('adminがownerロールを指定すると403を返す', async () => {
+    // Arrange: admin がオーナーロールを付与しようとする
+    mockCreateSupabaseClient.mockReturnValue({
+      auth: {
+        admin: {
+          listUsers: vi.fn().mockResolvedValue({
+            data: {
+              users: [{ id: 'user-2', email: 'target@example.com' }],
+            },
+            error: null,
+          }),
+        },
+      },
+    } as any)
+
+    let fromCallCount = 0
+    mockCreateClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1' } },
+          error: null,
+        }),
+      },
+      from: vi.fn().mockImplementation(() => {
+        fromCallCount++
+        // メンバーシップ確認（admin）
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({ data: { role: 'admin' }, error: null }),
+              }),
+            }),
+          }),
+        }
+      }),
+    } as any)
+
+    const request = new Request('http://localhost/api/teams/team-1/members', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'target@example.com', role: 'owner' }),
+    })
+
+    // Act
+    await POST(request, makeParams('team-1'))
+
+    // Assert: adminはownerロールを付与できないので403
+    expect(mockNextResponseJson).toHaveBeenCalledWith(
+      { error: '指定された役割を付与する権限がありません' },
+      { status: 403 }
+    )
+  })
+})
+
 describe('DELETE /api/teams/[id]/members/[userId]', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+  })
+
+  it('adminがownerを除名しようとすると403を返す', async () => {
+    // Arrange: admin（user-1）が owner（user-2）を除名しようとする
+    let fromCallCount = 0
+    mockCreateClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1' } },
+          error: null,
+        }),
+      },
+      from: vi.fn().mockImplementation(() => {
+        fromCallCount++
+        if (fromCallCount === 1) {
+          // 自分自身のメンバーシップ確認: admin
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  single: vi.fn().mockResolvedValue({ data: { role: 'admin' }, error: null }),
+                }),
+              }),
+            }),
+          }
+        }
+        // 除名対象（user-2）のメンバーシップ確認: owner
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({ data: { role: 'owner' }, error: null }),
+              }),
+            }),
+          }),
+        }
+      }),
+    } as any)
+
+    const request = new Request('http://localhost/api/teams/team-1/members/user-2', {
+      method: 'DELETE',
+    })
+
+    // Act: admin（user-1）が owner（user-2）を削除しようとする
+    await DELETE(request, makeUserParams('team-1', 'user-2'))
+
+    // Assert
+    expect(mockNextResponseJson).toHaveBeenCalledWith(
+      { error: '管理者はオーナーを除名できません' },
+      { status: 403 }
+    )
   })
 
   it('最後のオーナーが退会しようとすると400を返す', async () => {
