@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Toaster } from '@/components/ui/sonner'
+import { AccountSelector } from '@/components/AccountSelector'
+import type { XAccount } from '@/types/app'
 
 export default async function DashboardLayout({
   children,
@@ -14,6 +16,20 @@ export default async function DashboardLayout({
   if (!user) {
     redirect('/smart-social/auth/login')
   }
+
+  const { data: accounts } = await supabase
+    .from('x_accounts')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: true })
+
+  const xAccounts = (accounts ?? []) as XAccount[]
+
+  if (xAccounts.length === 0) {
+    redirect('/smart-social/setup')
+  }
+
+  const currentAccount = xAccounts[0]
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -43,8 +59,15 @@ export default async function DashboardLayout({
                 スケジュール
               </Link>
             </div>
-            <div className="text-xs text-gray-400 truncate max-w-[200px]">
-              {user.email}
+            <div className="flex items-center gap-3">
+              <AccountSelector
+                accounts={xAccounts}
+                currentAccountId={currentAccount.id}
+                onSelect={() => {}}
+              />
+              <span className="text-xs text-gray-400 truncate max-w-[200px]">
+                {user.email}
+              </span>
             </div>
           </div>
         </div>

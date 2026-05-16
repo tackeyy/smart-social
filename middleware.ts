@@ -36,7 +36,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // ダッシュボードへのアクセスは認証必須
-  if (!user && pathname.startsWith('/dashboard')) {
+  if (!user && (pathname.startsWith('/dashboard') || pathname.startsWith('/setup'))) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
     return NextResponse.redirect(url)
