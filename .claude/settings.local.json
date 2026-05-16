@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh run *)",
+      "Bash(sed -i '' 's|https://github.com/tackeyy/smart-sns|https://github.com/tackeyy/smart-social|g' /Users/tackeyy/dev/gyomu-ai/smart-social/CONTRIBUTING.md /Users/tackeyy/dev/gyomu-ai/smart-social/docs/TESTING.md /Users/tackeyy/dev/gyomu-ai/smart-social/README.ja.md)",
+      "Bash(sed -i '' 's|github.com/YOUR_USERNAME/smart-sns|github.com/YOUR_USERNAME/smart-social|g' /Users/tackeyy/dev/gyomu-ai/smart-social/CONTRIBUTING.md)",
+      "Bash(sed -i '' 's|smart-sns\\\\.git|smart-social.git|g' /Users/tackeyy/dev/gyomu-ai/smart-social/README.ja.md /Users/tackeyy/dev/gyomu-ai/smart-social/CONTRIBUTING.md)",
+      "Bash(sed -i '' 's|cd smart-sns|cd smart-social|g' /Users/tackeyy/dev/gyomu-ai/smart-social/README.ja.md /Users/tackeyy/dev/gyomu-ai/smart-social/CONTRIBUTING.md)"
+    ]
+  }
+}
