@@ -56,8 +56,7 @@ export default function SetupPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          x_username: username.trim().replace(/^@/, ''),
-          display_name: displayName,
+          screen_name: username.trim().replace(/^@/, ''),
           x_user_id: xUserId,
         }),
       })
