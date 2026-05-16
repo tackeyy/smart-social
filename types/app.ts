@@ -18,3 +18,13 @@ export interface ScheduledPost {
   status: 'pending' | 'posted' | 'failed'
   created_at: string
 }
+
+export interface XAccount {
+  id: number
+  user_id: string
+  x_user_id: string
+  x_username: string
+  display_name: string
+  created_at: string
+  updated_at: string
+}

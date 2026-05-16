@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
-import type { Draft, DraftStatus } from '@/types/app'
+import type { Draft, DraftStatus, XAccount } from '@/types/app'
 
 const STATUS_TABS: { value: DraftStatus | 'all'; label: string }[] = [
   { value: 'pending', label: '承認待ち' },
@@ -33,10 +33,12 @@ function GenerateDraftDialog({
   open,
   onOpenChange,
   onSuccess,
+  xAccountId,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess: () => void
+  xAccountId: string
 }) {
   const [form, setForm] = useState<GenerateFormState>({
     sourceTweetUrl: '',
@@ -67,7 +69,6 @@ function GenerateDraftDialog({
     setError(null)
 
     try {
-      const xAccountId = process.env.NEXT_PUBLIC_X_ACCOUNT_ID ?? ''
       const res = await fetch('/smart-social/api/drafts/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -184,6 +185,23 @@ export default function DraftsPage() {
   const [activeTab, setActiveTab] = useState<DraftStatus | 'all'>('pending')
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [currentXAccountId, setCurrentXAccountId] = useState<string>('')
+
+  useEffect(() => {
+    async function fetchCurrentAccount() {
+      try {
+        const res = await fetch('/smart-social/api/accounts')
+        if (!res.ok) return
+        const data: XAccount[] = await res.json()
+        if (data.length > 0) {
+          setCurrentXAccountId(String(data[0].id))
+        }
+      } catch {
+        // アカウント取得失敗時はドラフト生成ボタンを無効化するだけ
+      }
+    }
+    fetchCurrentAccount()
+  }, [])
 
   const fetchDrafts = useCallback(async (status: DraftStatus | 'all') => {
     setLoading(true)
@@ -222,7 +240,12 @@ export default function DraftsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">ドラフト一覧</h1>
-        <Button onClick={() => setDialogOpen(true)}>ドラフトを生成</Button>
+        <Button
+          onClick={() => setDialogOpen(true)}
+          disabled={!currentXAccountId}
+        >
+          ドラフトを生成
+        </Button>
       </div>
 
       {/* タブ */}
@@ -278,6 +301,7 @@ export default function DraftsPage() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         onSuccess={() => fetchDrafts(activeTab)}
+        xAccountId={currentXAccountId}
       />
     </div>
   )
