@@ -84,7 +84,7 @@ export async function runEvergreen(supabase: any): Promise<Array<{ rule_id: stri
         Date.now() + rule.interval_days * 24 * 60 * 60 * 1000
       ).toISOString()
 
-      await supabase
+      const { data: updated, error: updateError } = await supabase
         .from('evergreen_rules')
         .update({
           run_count: rule.run_count + 1,
@@ -94,6 +94,14 @@ export async function runEvergreen(supabase: any): Promise<Array<{ rule_id: stri
           updated_at: new Date().toISOString(),
         })
         .eq('id', rule.id)
+        .eq('run_count', rule.run_count)  // 楽観的ロック: 競合時はスキップ
+        .select('id')
+        .single()
+
+      if (updateError?.code === 'PGRST116' || !updated) {
+        results.push({ rule_id: rule.id, status: 'skipped' })
+        continue
+      }
 
       results.push({ rule_id: rule.id, status: 'drafted' })
     } catch (err) {
