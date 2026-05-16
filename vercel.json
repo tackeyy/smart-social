@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/smart-social/api/cron/scheduler",
-      "schedule": "0 0 * * *"
+      "schedule": "* * * * *"
     }
   ]
 }
