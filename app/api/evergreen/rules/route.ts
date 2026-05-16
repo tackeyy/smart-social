@@ -51,6 +51,9 @@ export async function POST(request: Request) {
   if (!body.source_tweet_id || body.source_tweet_id.trim().length === 0) {
     return NextResponse.json({ error: 'source_tweet_id は必須です' }, { status: 400 })
   }
+  if (!/^\d{1,20}$/.test(String(body.source_tweet_id))) {
+    return NextResponse.json({ error: 'source_tweet_id の形式が不正です' }, { status: 400 })
+  }
   if (!body.source_content || body.source_content.trim().length === 0) {
     return NextResponse.json({ error: 'source_content は必須です' }, { status: 400 })
   }
@@ -58,9 +61,29 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'source_content は280文字以内です' }, { status: 400 })
   }
 
+  if (body.prefix_pool !== undefined) {
+    if (!Array.isArray(body.prefix_pool) ||
+        body.prefix_pool.length > 20 ||
+        body.prefix_pool.some((p: unknown) => typeof p !== 'string' || p.length > 50)) {
+      return NextResponse.json({ error: 'prefix_pool は文字列の配列（最大20件、各50文字以内）で指定してください' }, { status: 400 })
+    }
+  }
+
   const intervalDays = body.interval_days ?? 30
   if (intervalDays < 7 || intervalDays > 365) {
     return NextResponse.json({ error: 'interval_days は7〜365の範囲で指定してください' }, { status: 400 })
+  }
+
+  // x_account_id の所有権チェック
+  const { data: account, error: accountError } = await supabase
+    .from('x_accounts')
+    .select('id')
+    .eq('id', body.x_account_id)
+    .eq('user_id', user.id)
+    .single()
+
+  if (accountError || !account) {
+    return NextResponse.json({ error: '指定されたXアカウントが見つかりません' }, { status: 403 })
   }
 
   // 重複チェック

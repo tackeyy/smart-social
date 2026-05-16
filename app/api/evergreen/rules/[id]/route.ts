@@ -31,6 +31,25 @@ export async function PATCH(
     }
   }
 
+  if ('enabled' in updates && typeof updates.enabled !== 'boolean') {
+    return NextResponse.json({ error: 'enabled は真偽値で指定してください' }, { status: 400 })
+  }
+
+  if ('max_runs' in updates && updates.max_runs !== null) {
+    const maxRuns = updates.max_runs
+    if (typeof maxRuns !== 'number' || !Number.isInteger(maxRuns) || maxRuns < 1) {
+      return NextResponse.json({ error: 'max_runs は1以上の整数またはnullで指定してください' }, { status: 400 })
+    }
+  }
+
+  if ('prefix_pool' in updates && updates.prefix_pool !== undefined) {
+    if (!Array.isArray(updates.prefix_pool) ||
+        (updates.prefix_pool as unknown[]).length > 20 ||
+        (updates.prefix_pool as unknown[]).some((p: unknown) => typeof p !== 'string' || (p as string).length > 50)) {
+      return NextResponse.json({ error: 'prefix_pool は文字列の配列（最大20件、各50文字以内）で指定してください' }, { status: 400 })
+    }
+  }
+
   const { data, error } = await supabase
     .from('evergreen_rules')
     .update({ ...updates, updated_at: new Date().toISOString() })
