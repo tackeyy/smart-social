@@ -13,11 +13,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
   }
 
+  const { origin } = new URL(request.url)
   const supabase = await createClient()
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/smart-social/auth/callback`,
+      emailRedirectTo: `${origin}/smart-social/auth/callback`,
     },
   })
 
