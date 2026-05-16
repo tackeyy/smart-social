@@ -1,0 +1,132 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { GET } from '@/app/api/cron/scheduler/route'
+
+// Supabaseクライアントをモック
+vi.mock('@supabase/supabase-js', () => ({
+  createClient: vi.fn(),
+}))
+
+// next/server のNextResponseをモック
+vi.mock('next/server', () => ({
+  NextResponse: {
+    json: vi.fn((body: unknown, init?: ResponseInit) => ({
+      body,
+      status: init?.status ?? 200,
+      json: async () => body,
+    })),
+  },
+}))
+
+import { createClient } from '@supabase/supabase-js'
+import { NextResponse } from 'next/server'
+
+const mockCreateClient = vi.mocked(createClient)
+const mockNextResponseJson = vi.mocked(NextResponse.json)
+
+describe('GET /api/cron/scheduler', () => {
+  const originalEnv = process.env
+
+  beforeEach(() => {
+    vi.resetAllMocks()
+    process.env = { ...originalEnv, CRON_SECRET: 'test-secret' }
+  })
+
+  afterEach(() => {
+    process.env = originalEnv
+  })
+
+  it('CRON_SECRETヘッダーなしは401を返す', async () => {
+    // Arrange
+    const request = new Request('http://localhost/api/cron/scheduler')
+
+    // Act
+    await GET(request)
+
+    // Assert
+    expect(mockNextResponseJson).toHaveBeenCalledWith(
+      { error: 'Unauthorized' },
+      { status: 401 }
+    )
+  })
+
+  it('CRON_SECRETが不一致の場合は401を返す', async () => {
+    // Arrange
+    const request = new Request('http://localhost/api/cron/scheduler', {
+      headers: { authorization: 'Bearer wrong-secret' },
+    })
+
+    // Act
+    await GET(request)
+
+    // Assert
+    expect(mockNextResponseJson).toHaveBeenCalledWith(
+      { error: 'Unauthorized' },
+      { status: 401 }
+    )
+  })
+
+  it('pending投稿がある場合はX API呼び出し後にstatus=postedで返す', async () => {
+    // Arrange
+    const mockPosts = [
+      { id: 'post-1', status: 'pending', drafts: { content: 'Hello' } },
+      { id: 'post-2', status: 'pending', drafts: { content: 'World' } },
+    ]
+    const mockFrom = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      lte: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      resolves: undefined,
+    })
+    const mockSupabaseSelect = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      lte: vi.fn().mockResolvedValue({ data: mockPosts, error: null }),
+    }
+    mockCreateClient.mockReturnValue({
+      from: vi.fn().mockReturnValue(mockSupabaseSelect),
+    } as any)
+
+    const request = new Request('http://localhost/api/cron/scheduler', {
+      headers: { authorization: 'Bearer test-secret' },
+    })
+
+    // Act
+    await GET(request)
+
+    // Assert
+    expect(mockNextResponseJson).toHaveBeenCalledWith(
+      expect.objectContaining({
+        processed: 2,
+        results: expect.arrayContaining([
+          expect.objectContaining({ id: 'post-1', status: 'posted' }),
+          expect.objectContaining({ id: 'post-2', status: 'posted' }),
+        ]),
+      })
+    )
+  })
+
+  it('pending投稿がない場合はprocessed=0を返す', async () => {
+    // Arrange
+    const mockSupabaseSelect = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      lte: vi.fn().mockResolvedValue({ data: [], error: null }),
+    }
+    mockCreateClient.mockReturnValue({
+      from: vi.fn().mockReturnValue(mockSupabaseSelect),
+    } as any)
+
+    const request = new Request('http://localhost/api/cron/scheduler', {
+      headers: { authorization: 'Bearer test-secret' },
+    })
+
+    // Act
+    await GET(request)
+
+    // Assert
+    expect(mockNextResponseJson).toHaveBeenCalledWith(
+      expect.objectContaining({ processed: 0 })
+    )
+  })
+})
