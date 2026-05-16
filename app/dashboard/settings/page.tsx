@@ -86,6 +86,38 @@ export default async function SettingsPage({
 
       <Card>
         <CardHeader>
+          <CardTitle>チーム管理</CardTitle>
+          <CardDescription>
+            チームを作成してメンバーと協力して投稿を管理します。
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild variant="outline">
+            <Link href="/dashboard/settings/team">
+              チーム管理を開く
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>エバーグリーン再投稿</CardTitle>
+          <CardDescription>
+            高エンゲージメントの投稿を定期的に自動再投稿します。分析ページから登録できます。
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild variant="outline">
+            <Link href="/dashboard/evergreen">
+              エバーグリーン管理を開く
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>文体プロファイル</CardTitle>

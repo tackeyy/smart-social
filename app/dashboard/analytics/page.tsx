@@ -15,6 +15,7 @@ import type { TweetMetrics } from '@/lib/x/analytics'
 import type { UserStats } from '@/app/api/x/user-stats/route'
 import { Skeleton } from '@/components/ui/skeleton'
 import { analyzeOptimalPostingTimes } from '@/lib/analytics/optimal-posting-time'
+import { RegisterEvergreenButton } from '@/components/evergreen/RegisterButton'
 
 const TEXT_PREVIEW_LENGTH = 60
 
@@ -318,6 +319,7 @@ function AnalyticsContent() {
                         <TableHead className="text-right">インプレッション</TableHead>
                         <TableHead className="text-right">E率</TableHead>
                         <TableHead className="min-w-[160px]" title="RT×20 + 引用×15 + 返信×13.5">スコア</TableHead>
+                        <TableHead className="w-[140px]"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -334,6 +336,14 @@ function AnalyticsContent() {
                           <TableCell className="text-right">{formatRate(m.engagement_rate)}</TableCell>
                           <TableCell>
                             <ScoreBar score={m.engagement_score} max={maxScore} />
+                          </TableCell>
+                          <TableCell>
+                            <RegisterEvergreenButton
+                              tweetId={m.tweet_id}
+                              content={m.text}
+                              score={m.engagement_score}
+                              accountId={accountId}
+                            />
                           </TableCell>
                         </TableRow>
                       ))}
