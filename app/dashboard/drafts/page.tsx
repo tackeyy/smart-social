@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import type { Draft, DraftStatus, XAccount } from '@/types/app'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const STATUS_TABS: { value: DraftStatus | 'all'; label: string }[] = [
   { value: 'pending',    label: '承認待ち' },
@@ -289,8 +290,10 @@ export default function DraftsPage() {
 
       {/* ドラフト一覧 */}
       {loading ? (
-        <div className="text-center py-12 text-gray-400" aria-live="polite" aria-busy="true">
-          読み込み中...
+        <div className="space-y-3" aria-live="polite" aria-busy="true">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-32" />
+          ))}
         </div>
       ) : displayedDrafts.length === 0 ? (
         <div className="text-center py-12 text-gray-400" aria-live="polite">

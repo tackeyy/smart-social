@@ -11,8 +11,10 @@ export interface TweetMetrics {
   like_count: number
   retweet_count: number
   reply_count: number
+  quote_count: number
   impression_count: number
-  engagement_rate: number // (like+rt+reply) / impression * 100
+  engagement_rate: number  // (like+rt+reply) / impression * 100
+  engagement_score: number // RT×20 + 引用×15 + 返信×13.5
 }
 
 // ---- OAuth 1.0a ヘルパー（アカウント別トークンを引数で受け取る） ----
@@ -90,6 +92,7 @@ interface XApiTweet {
     like_count: number
     retweet_count: number
     reply_count: number
+    quote_count: number
     impression_count: number
   }
 }
@@ -104,7 +107,7 @@ export async function fetchTweetMetrics(
 ): Promise<TweetMetrics[]> {
   const maxResults = Math.min(100, Math.max(1, params.max_results ?? 20))
   const endpoint = `${X_API_BASE}/users/${params.x_user_id}/tweets`
-  const url = `${endpoint}?tweet.fields=public_metrics,created_at&max_results=${maxResults}`
+  const url = `${endpoint}?tweet.fields=public_metrics,created_at&max_results=${maxResults}&expansions=referenced_tweets.id`
 
   const authHeader = buildOAuthHeaderWithTokens(
     'GET',
@@ -131,11 +134,12 @@ export async function fetchTweetMetrics(
   }
 
   return data.data.map((tweet) => {
-    const { like_count, retweet_count, reply_count, impression_count } = tweet.public_metrics
+    const { like_count, retweet_count, reply_count, quote_count = 0, impression_count } = tweet.public_metrics
     const engagement_rate =
       impression_count > 0
         ? ((like_count + retweet_count + reply_count) / impression_count) * 100
         : 0
+    const engagement_score = retweet_count * 20 + quote_count * 15 + reply_count * 13.5
 
     return {
       tweet_id: tweet.id,
@@ -144,8 +148,10 @@ export async function fetchTweetMetrics(
       like_count,
       retweet_count,
       reply_count,
+      quote_count,
       impression_count,
       engagement_rate,
+      engagement_score,
     }
   })
 }

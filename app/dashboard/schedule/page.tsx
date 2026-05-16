@@ -16,6 +16,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { Draft } from '@/types/app'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const STATUS_LABEL: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   scheduled: { label: '待機中', variant: 'secondary' },
@@ -192,7 +193,11 @@ export default function SchedulePage() {
       <div>
         <h2 className="text-base font-semibold text-manavi-navy mb-3">スケジュール一覧</h2>
         {loading ? (
-          <p className="text-gray-400 text-sm py-8 text-center" aria-live="polite" aria-busy="true">読み込み中...</p>
+          <div className="space-y-2" aria-live="polite" aria-busy="true">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-12" />
+            ))}
+          </div>
         ) : posts.length === 0 ? (
           <p className="text-gray-400 text-sm py-8 text-center" aria-live="polite">スケジュールはありません</p>
         ) : (

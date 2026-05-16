@@ -166,4 +166,57 @@ describe('fetchTweetMetrics', () => {
     const calledUrl = mockFetch.mock.calls[0][0] as string
     expect(calledUrl).toContain('max_results=100')
   })
+
+  it('engagement_score = RT×20 + 引用×15 + 返信×13.5 で計算される', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        makeXApiResponse([
+          {
+            id: '999',
+            text: 'Score test',
+            created_at: '2024-01-01T00:00:00Z',
+            public_metrics: {
+              like_count: 0,
+              retweet_count: 2,  // 2 × 20 = 40
+              reply_count: 4,    // 4 × 13.5 = 54
+              quote_count: 1,    // 1 × 15 = 15
+              impression_count: 1000,
+            },
+          },
+        ]),
+      ),
+    )
+
+    const result = await fetchTweetMetrics(BASE_PARAMS)
+
+    // 40 + 54 + 15 = 109
+    expect(result[0].engagement_score).toBeCloseTo(109)
+  })
+
+  it('quote_count が public_metrics に含まれる', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        makeXApiResponse([
+          {
+            id: '888',
+            text: 'Quote test',
+            created_at: '2024-01-01T00:00:00Z',
+            public_metrics: {
+              like_count: 0,
+              retweet_count: 0,
+              reply_count: 0,
+              quote_count: 3,
+              impression_count: 100,
+            },
+          },
+        ]),
+      ),
+    )
+
+    const result = await fetchTweetMetrics(BASE_PARAMS)
+
+    expect(result[0].quote_count).toBe(3)
+  })
 })

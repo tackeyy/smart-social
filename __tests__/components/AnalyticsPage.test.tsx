@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, waitFor } from '@testing-library/react'
 import React, { Suspense } from 'react'
 
 vi.mock('next/navigation', () => ({
@@ -51,13 +51,14 @@ describe('AnalyticsPage', () => {
     })
   })
 
-  it('ローディング中は "データを取得中..." が表示される', () => {
+  it('ローディング中はSkeletonが表示される（aria-busy=true）', () => {
     mockUseSearchParams.mockReturnValue(makeSearchParams({}))
     global.fetch = vi.fn().mockReturnValue(new Promise(() => {}))
 
     render(React.createElement(Suspense, { fallback: null }, React.createElement(AnalyticsPage)))
 
-    expect(screen.getByText('データを取得中...')).toBeTruthy()
+    const busyEl = document.querySelector('[aria-busy="true"]')
+    expect(busyEl).toBeTruthy()
   })
 
   it('account_id が変わった場合は新しい x_account_id で再fetchする', async () => {

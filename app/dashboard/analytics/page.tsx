@@ -12,6 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import type { TweetMetrics } from '@/lib/x/analytics'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const TEXT_PREVIEW_LENGTH = 60
 
@@ -70,7 +71,14 @@ function AnalyticsContent() {
       <h1 className="text-xl font-semibold tracking-[-0.02em] text-manavi-navy">分析</h1>
 
       {loading && (
-        <p className="text-sm text-gray-500" aria-live="polite" aria-busy="true">データを取得中...</p>
+        <div className="space-y-3" aria-busy="true" aria-live="polite">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-24 rounded-[6px]" />
+            ))}
+          </div>
+          <Skeleton className="h-64" />
+        </div>
       )}
 
       {error && (
@@ -139,9 +147,11 @@ function AnalyticsContent() {
                       <TableHead className="w-[300px]">本文</TableHead>
                       <TableHead className="text-right">いいね</TableHead>
                       <TableHead className="text-right">RT</TableHead>
+                      <TableHead className="text-right">引用</TableHead>
                       <TableHead className="text-right">リプライ</TableHead>
                       <TableHead className="text-right">インプレッション</TableHead>
                       <TableHead className="text-right">エンゲージメント率</TableHead>
+                      <TableHead className="text-right" title="RT×20 + 引用×15 + 返信×13.5">スコア</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -157,6 +167,9 @@ function AnalyticsContent() {
                           {m.retweet_count.toLocaleString()}
                         </TableCell>
                         <TableCell className="text-right">
+                          {m.quote_count.toLocaleString()}
+                        </TableCell>
+                        <TableCell className="text-right">
                           {m.reply_count.toLocaleString()}
                         </TableCell>
                         <TableCell className="text-right">
@@ -164,6 +177,9 @@ function AnalyticsContent() {
                         </TableCell>
                         <TableCell className="text-right">
                           {formatRate(m.engagement_rate)}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold text-manavi-navy">
+                          {Math.round(m.engagement_score).toLocaleString()}
                         </TableCell>
                       </TableRow>
                     ))}
