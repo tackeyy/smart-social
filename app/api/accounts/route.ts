@@ -36,23 +36,23 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
-  const { x_username, display_name, x_user_id } = body as Record<string, unknown>
+  const { screen_name, x_user_id } = body as Record<string, unknown>
 
-  if (!x_username || !display_name || !x_user_id) {
-    return NextResponse.json({ error: 'x_username, display_name, x_user_id are required' }, { status: 400 })
+  if (!screen_name || !x_user_id) {
+    return NextResponse.json({ error: 'screen_name, x_user_id are required' }, { status: 400 })
   }
 
-  if (typeof x_username !== 'string' || typeof display_name !== 'string') {
-    return NextResponse.json({ error: 'x_username and display_name must be strings' }, { status: 400 })
+  if (typeof screen_name !== 'string') {
+    return NextResponse.json({ error: 'screen_name must be a string' }, { status: 400 })
   }
 
-  if (!x_username.trim() || !display_name.trim()) {
-    return NextResponse.json({ error: 'x_username and display_name must not be empty' }, { status: 400 })
+  if (!screen_name.trim()) {
+    return NextResponse.json({ error: 'screen_name must not be empty' }, { status: 400 })
   }
 
-  if (!/^[A-Za-z0-9_]{1,50}$/.test(x_username as string)) {
+  if (!/^[A-Za-z0-9_]{1,50}$/.test(screen_name as string)) {
     return NextResponse.json(
-      { error: 'x_username must be alphanumeric and underscores only (max 50 chars)' },
+      { error: 'screen_name must be alphanumeric and underscores only (max 50 chars)' },
       { status: 400 }
     )
   }
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
 
   const { data, error } = await supabase
     .from('x_accounts')
-    .insert({ user_id: user.id, x_username, x_user_id, display_name })
+    .insert({ user_id: user.id, screen_name, x_user_id })
     .select()
     .single()
 
