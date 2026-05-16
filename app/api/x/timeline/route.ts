@@ -39,7 +39,12 @@ export async function GET(request: Request) {
     max_results: String(maxResults),
     'tweet.fields': 'id,text,created_at',
   })
-  if (paginationToken) timelineParams.set('pagination_token', paginationToken)
+  if (paginationToken) {
+    if (!/^[A-Za-z0-9_\-=+/]{1,512}$/.test(paginationToken)) {
+      return NextResponse.json({ error: '無効な pagination_token です' }, { status: 400 })
+    }
+    timelineParams.set('pagination_token', paginationToken)
+  }
 
   const timelineUrl = `${X_API_BASE}/users/${account.x_user_id}/tweets?${timelineParams.toString()}`
 
@@ -54,7 +59,7 @@ export async function GET(request: Request) {
 
     if (!response.ok) {
       const message = data.errors?.[0]?.message ?? `X API error: ${response.status}`
-      return NextResponse.json({ error: message }, { status: 422 })
+      return NextResponse.json({ error: message }, { status: 502 })
     }
 
     return NextResponse.json(data)
