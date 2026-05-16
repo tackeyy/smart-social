@@ -1,14 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
+import { generateStyleProfile } from '@/lib/claude/client'
 
 const X_API_BASE = 'https://api.x.com/2'
-
-// テスト互換のAnthropicインスタンス生成（vi.fn() mock が new に対応していない環境で動作）
-function createAnthropic() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (Anthropic as unknown as (...args: unknown[]) => InstanceType<typeof Anthropic>)()
-}
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -49,41 +43,18 @@ export async function POST(request: Request) {
     },
   })
 
+  if (!xResponse.ok) {
+    const errData = await xResponse.json().catch(() => ({}))
+    console.error('X API error:', xResponse.status, errData)
+    return NextResponse.json({ error: 'Failed to fetch timeline from X API' }, { status: 422 })
+  }
+
   const xData = await xResponse.json()
   const tweets: Array<{ id: string; text: string }> = xData.data ?? []
 
-  // Anthropic SDK でプロファイル生成
+  // lib/claude/client.ts の関数でプロファイル生成
   try {
-    const anthropic = createAnthropic()
-    const tweetTexts = tweets.map(t => t.text).join('\n---\n')
-
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
-      messages: [
-        {
-          role: 'user',
-          content: `以下のツイートから文体プロファイルをJSONで生成してください。
-出力形式: { tone, emoji_usage, avg_length, patterns: string[], sample_phrases: string[] }
-
-ツイート:
-${tweetTexts}`,
-        },
-      ],
-    })
-
-    const textContent = message.content.find(c => c.type === 'text')
-    if (!textContent || textContent.type !== 'text') {
-      throw new Error('Unexpected response from Claude API')
-    }
-
-    let profileData: object
-    try {
-      const jsonMatch = (textContent as { type: 'text'; text: string }).text.match(/\{[\s\S]*\}/)
-      profileData = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse((textContent as { type: 'text'; text: string }).text)
-    } catch {
-      profileData = { raw: (textContent as { type: 'text'; text: string }).text }
-    }
+    const profileData = await generateStyleProfile(tweets.map(t => t.text))
 
     // style_profiles に保存
     const { data: savedProfile } = await supabase

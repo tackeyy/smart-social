@@ -16,47 +16,35 @@ vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(),
 }))
 
-// Anthropic SDK をモック
-vi.mock('@anthropic-ai/sdk', () => ({
-  default: vi.fn().mockImplementation(() => ({
-    messages: {
-      create: vi.fn(),
-    },
-  })),
+// lib/claude/client をモック（M-2: createAnthropicハック削除に対応）
+vi.mock('@/lib/claude/client', () => ({
+  generateStyleProfile: vi.fn(),
+  generateDraftCandidates: vi.fn(),
 }))
 
 import { POST } from '@/app/api/drafts/generate/route'
 import { createClient } from '@/lib/supabase/server'
-import Anthropic from '@anthropic-ai/sdk'
+import { generateDraftCandidates } from '@/lib/claude/client'
 import { NextResponse } from 'next/server'
 
 const mockCreateClient = vi.mocked(createClient)
 const mockNextResponseJson = vi.mocked(NextResponse.json)
-const MockAnthropic = vi.mocked(Anthropic)
+const mockGenerateDraftCandidates = vi.mocked(generateDraftCandidates)
 
 /**
- * POST /api/drafts/generate のテスト（TDD Red フェーズ）
+ * POST /api/drafts/generate のテスト
  *
  * 対象ファイル: app/api/drafts/generate/route.ts
- * ※ 実装はまだ存在しない。テストが失敗することを確認すること（Red）。
  *
  * 仕様:
  * - リクエストボディに x_account_id と source_tweet_url（またはtweet_id）を受け取る
  * - style_profiles テーブルからユーザーの文体プロファイルを取得（未生成なら404）
- * - Claude API でリプライドラフトを3候補生成
+ * - lib/claude/client の generateDraftCandidates でリプライドラフトを3候補生成
  * - reply_drafts テーブルに保存して返す
  */
 describe('POST /api/drafts/generate', () => {
-  let mockAnthropicInstance: { messages: { create: ReturnType<typeof vi.fn> } }
-
   beforeEach(() => {
     vi.resetAllMocks()
-    mockAnthropicInstance = {
-      messages: {
-        create: vi.fn(),
-      },
-    }
-    MockAnthropic.mockImplementation(() => mockAnthropicInstance as any)
   })
 
   it('未認証の場合は401を返す', async () => {
@@ -146,8 +134,13 @@ describe('POST /api/drafts/generate', () => {
     const mockProfile = {
       id: 'profile-1',
       x_account_id: 'account-1',
-      tone: 'professional',
-      vocabulary: ['AI', 'テクノロジー'],
+      profile_data: {
+        tone: 'professional',
+        emoji_usage: 'rare',
+        avg_length: 100,
+        patterns: ['AI', 'テクノロジー'],
+        sample_phrases: ['革新的な'],
+      },
     }
 
     const mockDraftCandidates = [
@@ -156,15 +149,8 @@ describe('POST /api/drafts/generate', () => {
       '候補3のドラフトテキスト',
     ]
 
-    // Claude API が3候補を返す（JSON 形式 or 改行区切り）
-    mockAnthropicInstance.messages.create.mockResolvedValue({
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(mockDraftCandidates),
-        },
-      ],
-    } as any)
+    // generateDraftCandidates が3候補を返す
+    mockGenerateDraftCandidates.mockResolvedValue(mockDraftCandidates)
 
     const mockInsert = vi.fn().mockResolvedValue({
       data: mockDraftCandidates.map((text, i) => ({
@@ -219,8 +205,8 @@ describe('POST /api/drafts/generate', () => {
     // Act
     await POST(request)
 
-    // Assert: Claude API が呼ばれたこと
-    expect(mockAnthropicInstance.messages.create).toHaveBeenCalledOnce()
+    // Assert: generateDraftCandidates が呼ばれたこと
+    expect(mockGenerateDraftCandidates).toHaveBeenCalledOnce()
     // Assert: reply_drafts への INSERT が呼ばれたこと
     expect(mockInsert).toHaveBeenCalledOnce()
     // Assert: 3候補が返ること
@@ -235,16 +221,18 @@ describe('POST /api/drafts/generate', () => {
 
   it('正常系: 生成されたドラフトは3件であること', async () => {
     // Arrange
-    const mockProfile = { id: 'profile-1', x_account_id: 'account-1' }
+    const mockProfile = {
+      id: 'profile-1',
+      x_account_id: 'account-1',
+      profile_data: { tone: 'casual' },
+    }
     const mockDrafts = [
       { id: 'draft-1', content: '候補1', status: 'pending' },
       { id: 'draft-2', content: '候補2', status: 'pending' },
       { id: 'draft-3', content: '候補3', status: 'pending' },
     ]
 
-    mockAnthropicInstance.messages.create.mockResolvedValue({
-      content: [{ type: 'text', text: JSON.stringify(['候補1', '候補2', '候補3']) }],
-    } as any)
+    mockGenerateDraftCandidates.mockResolvedValue(['候補1', '候補2', '候補3'])
 
     mockCreateClient.mockResolvedValue({
       auth: {
@@ -308,12 +296,14 @@ describe('POST /api/drafts/generate', () => {
 
   it('Claude API が失敗した場合は500を返す', async () => {
     // Arrange
-    const mockProfile = { id: 'profile-1', x_account_id: 'account-1' }
+    const mockProfile = {
+      id: 'profile-1',
+      x_account_id: 'account-1',
+      profile_data: { tone: 'casual' },
+    }
 
-    // Claude API がエラーをスロー
-    mockAnthropicInstance.messages.create.mockRejectedValue(
-      new Error('Claude API internal error')
-    )
+    // generateDraftCandidates がエラーをスロー
+    mockGenerateDraftCandidates.mockRejectedValue(new Error('Claude API internal error'))
 
     mockCreateClient.mockResolvedValue({
       auth: {

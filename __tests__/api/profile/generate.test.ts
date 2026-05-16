@@ -16,47 +16,35 @@ vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(),
 }))
 
-// Anthropic SDK をモック
-vi.mock('@anthropic-ai/sdk', () => ({
-  default: vi.fn().mockImplementation(() => ({
-    messages: {
-      create: vi.fn(),
-    },
-  })),
+// lib/claude/client をモック（M-2: createAnthropicハック削除に対応）
+vi.mock('@/lib/claude/client', () => ({
+  generateStyleProfile: vi.fn(),
+  generateDraftCandidates: vi.fn(),
 }))
 
 import { POST } from '@/app/api/profile/generate/route'
 import { createClient } from '@/lib/supabase/server'
-import Anthropic from '@anthropic-ai/sdk'
+import { generateStyleProfile } from '@/lib/claude/client'
 import { NextResponse } from 'next/server'
 
 const mockCreateClient = vi.mocked(createClient)
 const mockNextResponseJson = vi.mocked(NextResponse.json)
-const MockAnthropic = vi.mocked(Anthropic)
+const mockGenerateStyleProfile = vi.mocked(generateStyleProfile)
 
 /**
- * POST /api/profile/generate のテスト（TDD Red フェーズ）
+ * POST /api/profile/generate のテスト
  *
  * 対象ファイル: app/api/profile/generate/route.ts
- * ※ 実装はまだ存在しない。テストが失敗することを確認すること（Red）。
  *
  * 仕様:
  * - リクエストボディに x_account_id を受け取る
  * - 認証済みユーザーの X アカウントのツイート履歴を取得
- * - Claude API で文体プロファイルを生成
+ * - lib/claude/client の generateStyleProfile で文体プロファイルを生成
  * - style_profiles テーブルに保存
  */
 describe('POST /api/profile/generate', () => {
-  let mockAnthropicInstance: { messages: { create: ReturnType<typeof vi.fn> } }
-
   beforeEach(() => {
     vi.resetAllMocks()
-    mockAnthropicInstance = {
-      messages: {
-        create: vi.fn(),
-      },
-    }
-    MockAnthropic.mockImplementation(() => mockAnthropicInstance as any)
   })
 
   it('未認証の場合は401を返す', async () => {
@@ -149,17 +137,8 @@ describe('POST /api/profile/generate', () => {
       json: async () => ({ data: mockTweets }),
     })
 
-    // Claude API のレスポンスをモック
-    mockAnthropicInstance.messages.create.mockResolvedValue({
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(mockProfile),
-        },
-      ],
-    } as any)
-
-    const mockInsert = vi.fn().mockResolvedValue({ data: [{ id: 'profile-1' }], error: null })
+    // lib/claude/client の generateStyleProfile をモック
+    mockGenerateStyleProfile.mockResolvedValue(mockProfile as any)
 
     mockCreateClient.mockResolvedValue({
       auth: {
@@ -178,7 +157,6 @@ describe('POST /api/profile/generate', () => {
         }
         if (table === 'style_profiles') {
           return {
-            insert: mockInsert,
             upsert: vi.fn().mockResolvedValue({ data: [{ id: 'profile-1' }], error: null }),
           }
         }
@@ -195,8 +173,9 @@ describe('POST /api/profile/generate', () => {
     // Act
     await POST(request)
 
-    // Assert: Claude API が呼ばれたこと
-    expect(mockAnthropicInstance.messages.create).toHaveBeenCalledOnce()
+    // Assert: generateStyleProfile が呼ばれたこと
+    expect(mockGenerateStyleProfile).toHaveBeenCalledOnce()
+    expect(mockGenerateStyleProfile).toHaveBeenCalledWith(['テストツイート1', 'テストツイート2'])
     // Assert: style_profiles への保存が呼ばれたこと
     expect(mockNextResponseJson).toHaveBeenCalledWith(
       expect.objectContaining({ profile: expect.any(Object) })
@@ -218,10 +197,8 @@ describe('POST /api/profile/generate', () => {
       json: async () => ({ data: [{ id: 'tweet-1', text: 'テスト' }] }),
     })
 
-    // Claude API がエラーをスロー
-    mockAnthropicInstance.messages.create.mockRejectedValue(
-      new Error('Claude API overloaded')
-    )
+    // generateStyleProfile がエラーをスロー
+    mockGenerateStyleProfile.mockRejectedValue(new Error('Claude API overloaded'))
 
     mockCreateClient.mockResolvedValue({
       auth: {

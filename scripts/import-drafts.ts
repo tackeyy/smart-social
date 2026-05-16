@@ -17,7 +17,7 @@ export interface ImportResult {
 export async function parseMdFile(filePath: string): Promise<ParsedDraft[]> {
   const { readFile } = await import('fs/promises')
   const content = await readFile(filePath, 'utf-8')
-  const str = typeof content === 'string' ? content : content.toString()
+  const str = content
   if (!str) return []
 
   const results: ParsedDraft[] = []
@@ -52,7 +52,10 @@ export async function importDrafts(
   const { createClient } = await import('@supabase/supabase-js')
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'http://localhost:54321'
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!supabaseKey) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY is required for import-drafts script')
+  }
   const supabase = createClient(supabaseUrl, supabaseKey)
 
   const files = await readdir(dir)
@@ -78,6 +81,7 @@ export async function importDrafts(
       }
 
       if (opts.dryRun) {
+        imported++
         continue
       }
 

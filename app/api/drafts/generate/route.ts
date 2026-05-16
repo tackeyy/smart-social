@@ -1,14 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
-
-// テスト互換のAnthropicインスタンス生成（vi.fn() mock が new に対応していない環境で動作）
-function createAnthropic() {
-  // Anthropic SDK は exports = function(...args) { return new exports.default(...args) }
-  // つまり関数としても呼び出せる設計になっている
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (Anthropic as unknown as (...args: unknown[]) => InstanceType<typeof Anthropic>)()
-}
+import { generateDraftCandidates } from '@/lib/claude/client'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -60,44 +52,14 @@ export async function POST(request: Request) {
     )
   }
 
-  // Claude API で3候補生成
+  // lib/claude/client.ts の関数で3候補生成
   try {
-    const anthropic = createAnthropic()
-
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
-      messages: [
-        {
-          role: 'user',
-          content: `以下のツイートに対するリプライ案を3つ生成してください。
-文体プロファイルに従い、JSON配列形式で出力してください。
-
-元ツイート:
-${body.source_tweet_text ?? body.source_tweet_url}
-
-文体プロファイル:
-${JSON.stringify(styleProfile, null, 2)}
-
-${body.instruction ? `追加指示: ${body.instruction}` : ''}
-
-出力形式: ["候補1", "候補2", "候補3"]`,
-        },
-      ],
-    })
-
-    const textContent = message.content.find((c: { type: string }) => c.type === 'text')
-    if (!textContent || textContent.type !== 'text') {
-      throw new Error('Unexpected response from Claude API')
-    }
-
-    let candidates: string[]
-    try {
-      const jsonMatch = (textContent as { type: 'text'; text: string }).text.match(/\[[\s\S]*\]/)
-      candidates = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse((textContent as { type: 'text'; text: string }).text)
-    } catch {
-      throw new Error('Failed to parse Claude response as JSON array')
-    }
+    const { tone, emoji_usage, avg_length, patterns, sample_phrases } = styleProfile.profile_data ?? styleProfile
+    const candidates = await generateDraftCandidates(
+      body.source_tweet_text ?? body.source_tweet_url,
+      { tone, emoji_usage, avg_length, patterns, sample_phrases },
+      body.instruction
+    )
 
     // reply_drafts に INSERT
     const now = new Date().toISOString()

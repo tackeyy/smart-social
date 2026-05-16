@@ -11,10 +11,13 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { data: accounts } = await supabase
-    .from('x_accounts')
-    .select('x_user_id, access_token')
-    .eq('user_id', user.id)
+  const url = new URL(request.url)
+
+  // x_account_id クエリパラメータ対応（省略時は先頭アカウントを使用）
+  const xAccountId = url.searchParams.get('x_account_id')
+  const accountQuery = supabase.from('x_accounts').select('id, x_user_id, access_token').eq('user_id', user.id)
+  if (xAccountId) accountQuery.eq('id', xAccountId)
+  const { data: accounts } = await accountQuery
 
   if (!accounts || accounts.length === 0) {
     return NextResponse.json({ error: 'X account not connected' }, { status: 404 })
@@ -22,8 +25,9 @@ export async function GET(request: Request) {
 
   const account = accounts[0]
 
-  const url = new URL(request.url)
-  const maxResults = url.searchParams.get('max_results') ?? '50'
+  // max_results: 1〜100の範囲でクランプ
+  const maxResultsRaw = url.searchParams.get('max_results') ?? '50'
+  const maxResults = Math.min(100, Math.max(1, parseInt(maxResultsRaw, 10) || 50))
 
   const timelineUrl = `${X_API_BASE}/users/${account.x_user_id}/tweets?max_results=${maxResults}&tweet.fields=id,text,created_at`
 
