@@ -15,7 +15,8 @@ export async function GET(_request: Request) {
     .eq('user_id', user.id)
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error('[GET /api/accounts]', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 
   return NextResponse.json(data)
@@ -47,6 +48,13 @@ export async function POST(request: Request) {
 
   if (!x_username.trim() || !display_name.trim()) {
     return NextResponse.json({ error: 'x_username and display_name must not be empty' }, { status: 400 })
+  }
+
+  if (!/^[A-Za-z0-9_]{1,50}$/.test(x_username as string)) {
+    return NextResponse.json(
+      { error: 'x_username must be alphanumeric and underscores only (max 50 chars)' },
+      { status: 400 }
+    )
   }
 
   if (!/^\d+$/.test(x_user_id as string)) {
