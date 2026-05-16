@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { Menu, X } from 'lucide-react'
 
 const navLinks = [
@@ -19,6 +20,13 @@ interface NavBarProps {
 
 export function NavBar({ desktopRightSlot }: NavBarProps) {
   const [open, setOpen] = useState(false)
+  const pathname = usePathname()
+
+  function isActive(href: string) {
+    // /dashboard は完全一致、その他は前方一致
+    if (href === '/dashboard') return pathname === '/dashboard'
+    return pathname.startsWith(href)
+  }
 
   return (
     <nav className="bg-manavi-navy border-b border-white/10">
@@ -32,15 +40,23 @@ export function NavBar({ desktopRightSlot }: NavBarProps) {
               Smart Social
             </Link>
             <div className="hidden md:flex items-center gap-1">
-              {navLinks.map(({ href, label }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  className="text-sm text-white/60 hover:text-white px-3 py-1.5 rounded transition-colors duration-150"
-                >
-                  {label}
-                </Link>
-              ))}
+              {navLinks.map(({ href, label }) => {
+                const active = isActive(href)
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    aria-current={active ? 'page' : undefined}
+                    className={`text-sm px-3 py-1.5 rounded transition-colors duration-150 ${
+                      active
+                        ? 'text-white bg-white/10'
+                        : 'text-white/60 hover:text-white'
+                    }`}
+                  >
+                    {label}
+                  </Link>
+                )
+              })}
             </div>
           </div>
 
@@ -63,16 +79,24 @@ export function NavBar({ desktopRightSlot }: NavBarProps) {
 
       {open && (
         <div className="md:hidden border-t border-white/10 px-4 py-2">
-          {navLinks.map(({ href, label }) => (
-            <Link
-              key={href}
-              href={href}
-              className="block text-sm text-white/60 hover:text-white px-2 py-2.5 rounded transition-colors duration-150"
-              onClick={() => setOpen(false)}
-            >
-              {label}
-            </Link>
-          ))}
+          {navLinks.map(({ href, label }) => {
+            const active = isActive(href)
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={active ? 'page' : undefined}
+                className={`block text-sm px-2 py-2.5 rounded transition-colors duration-150 ${
+                  active
+                    ? 'text-white bg-white/10'
+                    : 'text-white/60 hover:text-white'
+                }`}
+                onClick={() => setOpen(false)}
+              >
+                {label}
+              </Link>
+            )
+          })}
         </div>
       )}
     </nav>

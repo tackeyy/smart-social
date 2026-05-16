@@ -23,7 +23,7 @@ export function AccountSelector({ accounts, currentAccountId }: AccountSelectorP
 
   if (accounts.length === 1) {
     return (
-      <span className="text-sm text-gray-600">@{accounts[0].screen_name}</span>
+      <span className="text-sm text-white/80">@{accounts[0].screen_name}</span>
     )
   }
 

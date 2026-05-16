@@ -67,14 +67,14 @@ function AnalyticsContent() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">分析</h1>
+      <h1 className="text-xl font-semibold tracking-[-0.02em] text-manavi-navy">分析</h1>
 
       {loading && (
-        <p className="text-sm text-gray-500">データを取得中...</p>
+        <p className="text-sm text-gray-500" aria-live="polite" aria-busy="true">データを取得中...</p>
       )}
 
       {error && (
-        <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700" role="alert">
           {error}
         </div>
       )}
@@ -83,43 +83,43 @@ function AnalyticsContent() {
         <>
           {/* サマリーカード */}
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-500">
+            <Card className="shadow-manavi-sm rounded-[6px] border-manavi-border">
+              <CardHeader className="pb-2 pt-5 px-5">
+                <CardTitle className="text-xs font-medium text-manavi-navy-light uppercase tracking-wide">
                   合計インプレッション
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold">{totalImpressions.toLocaleString()}</p>
+              <CardContent className="px-5 pb-5">
+                <p className="text-3xl font-semibold tabular-nums text-manavi-navy">{totalImpressions.toLocaleString()}</p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-500">合計いいね</CardTitle>
+            <Card className="shadow-manavi-sm rounded-[6px] border-manavi-border">
+              <CardHeader className="pb-2 pt-5 px-5">
+                <CardTitle className="text-xs font-medium text-manavi-navy-light uppercase tracking-wide">合計いいね</CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold">{totalLikes.toLocaleString()}</p>
+              <CardContent className="px-5 pb-5">
+                <p className="text-3xl font-semibold tabular-nums text-manavi-navy">{totalLikes.toLocaleString()}</p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-500">合計RT</CardTitle>
+            <Card className="shadow-manavi-sm rounded-[6px] border-manavi-border">
+              <CardHeader className="pb-2 pt-5 px-5">
+                <CardTitle className="text-xs font-medium text-manavi-navy-light uppercase tracking-wide">合計RT</CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold">{totalRetweets.toLocaleString()}</p>
+              <CardContent className="px-5 pb-5">
+                <p className="text-3xl font-semibold tabular-nums text-manavi-navy">{totalRetweets.toLocaleString()}</p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-500">
+            <Card className="shadow-manavi-sm rounded-[6px] border-manavi-border">
+              <CardHeader className="pb-2 pt-5 px-5">
+                <CardTitle className="text-xs font-medium text-manavi-navy-light uppercase tracking-wide">
                   平均エンゲージメント率
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold">{formatRate(avgEngagementRate)}</p>
+              <CardContent className="px-5 pb-5">
+                <p className="text-3xl font-semibold tabular-nums text-manavi-navy">{formatRate(avgEngagementRate)}</p>
               </CardContent>
             </Card>
           </div>

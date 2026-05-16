@@ -7,6 +7,10 @@ vi.mock('next/link', () => ({
     React.createElement('a', { href, ...props }, children),
 }))
 
+vi.mock('next/navigation', () => ({
+  usePathname: vi.fn(() => '/dashboard'),
+}))
+
 import { NavBar } from '@/components/NavBar'
 
 describe('NavBar', () => {

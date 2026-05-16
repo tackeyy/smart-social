@@ -241,7 +241,7 @@ export default function DraftsPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">ドラフト一覧</h1>
+        <h1 className="text-xl font-semibold tracking-[-0.02em] text-manavi-navy">ドラフト一覧</h1>
         <Button
           onClick={() => setDialogOpen(true)}
           disabled={!currentXAccountId}
@@ -251,7 +251,22 @@ export default function DraftsPage() {
       </div>
 
       {/* タブ */}
-      <div className="flex gap-2 mb-6 flex-wrap" role="tablist" aria-label="ドラフトフィルター">
+      <div
+        className="flex gap-2 mb-6 flex-wrap"
+        role="tablist"
+        aria-label="ドラフトフィルター"
+        onKeyDown={(e) => {
+          const tabs = STATUS_TABS.map((t) => t.value)
+          const currentIndex = tabs.indexOf(activeTab)
+          if (e.key === 'ArrowRight') {
+            e.preventDefault()
+            setActiveTab(tabs[(currentIndex + 1) % tabs.length])
+          } else if (e.key === 'ArrowLeft') {
+            e.preventDefault()
+            setActiveTab(tabs[(currentIndex - 1 + tabs.length) % tabs.length])
+          }
+        }}
+      >
         {STATUS_TABS.map((tab) => {
           const isActive = activeTab === tab.value
           return (
@@ -259,10 +274,11 @@ export default function DraftsPage() {
               key={tab.value}
               role="tab"
               aria-selected={isActive}
+              tabIndex={isActive ? 0 : -1}
               onClick={() => setActiveTab(tab.value)}
               className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                 isActive
-                  ? 'bg-gray-900 text-white border-gray-900'
+                  ? 'bg-manavi-navy text-white border-manavi-navy'
                   : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
               }`}
             >
@@ -274,7 +290,7 @@ export default function DraftsPage() {
 
       {/* ドラフト一覧 */}
       {loading ? (
-        <div className="text-center py-12 text-gray-400" aria-live="polite">
+        <div className="text-center py-12 text-gray-400" aria-live="polite" aria-busy="true">
           読み込み中...
         </div>
       ) : displayedDrafts.length === 0 ? (

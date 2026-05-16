@@ -8,14 +8,14 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import type { Draft, DraftStatus } from '@/types/app'
 
-const STATUS_LABEL: Record<DraftStatus, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  pending:    { label: '承認待ち',       variant: 'secondary' },
-  approved:   { label: '承認済み',       variant: 'default' },
-  scheduled:  { label: 'スケジュール済み', variant: 'default' },
-  processing: { label: '処理中',         variant: 'secondary' },
-  posted:     { label: '投稿済み',       variant: 'outline' },
-  rejected:   { label: '却下',           variant: 'destructive' },
-  failed:     { label: '投稿失敗',       variant: 'destructive' },
+const STATUS_LABEL: Record<DraftStatus, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; description?: string }> = {
+  pending:    { label: '承認待ち',        variant: 'secondary' },
+  approved:   { label: '承認済み',        variant: 'outline' },
+  scheduled:  { label: 'スケジュール済み', variant: 'default',     description: '指定日時に自動投稿されます' },
+  processing: { label: '処理中',          variant: 'secondary',   description: '投稿処理が進行中です。しばらくお待ちください' },
+  posted:     { label: '投稿済み',        variant: 'outline' },
+  rejected:   { label: '却下',            variant: 'destructive' },
+  failed:     { label: '投稿失敗',        variant: 'destructive', description: '投稿に失敗しました。内容を確認してください' },
 }
 
 const MAX_CHARS = 280
@@ -25,10 +25,17 @@ interface DraftCardProps {
   onStatusChange: (id: string, newStatus: DraftStatus) => void
 }
 
+const EXTERNAL_URL_PATTERN = /https?:\/\/(?!(?:x|twitter)\.com)[^\s]+/i
+
+function hasExternalLink(text: string): boolean {
+  return EXTERNAL_URL_PATTERN.test(text)
+}
+
 export function DraftCard({ draft, onStatusChange }: DraftCardProps) {
   const [content, setContent] = useState(draft.content)
   const [isEditing, setIsEditing] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [warningDismissed, setWarningDismissed] = useState(false)
 
   const charCount = content.length
   const isOverLimit = charCount > MAX_CHARS
@@ -110,8 +117,11 @@ export function DraftCard({ draft, onStatusChange }: DraftCardProps) {
   return (
     <Card className="w-full">
       <CardHeader className="pb-2 flex flex-row flex-wrap items-center justify-between gap-y-1">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Badge variant={status.variant}>{status.label}</Badge>
+          {status.description && (
+            <span className="text-xs text-gray-500">{status.description}</span>
+          )}
           {draft.posted_at && (
             <span className="text-xs text-gray-400">
               投稿: {new Date(draft.posted_at).toLocaleString('ja-JP')}
@@ -124,6 +134,23 @@ export function DraftCard({ draft, onStatusChange }: DraftCardProps) {
       </CardHeader>
 
       <CardContent className="space-y-3">
+        {/* 外部リンク警告バナー */}
+        {!warningDismissed && hasExternalLink(content) && (
+          <div
+            role="alert"
+            className="flex items-start justify-between gap-2 rounded-md border border-yellow-300 bg-yellow-50 px-3 py-2 text-xs text-yellow-800"
+          >
+            <span>⚠️ 外部リンクを含む投稿はリーチが低下する場合があります。</span>
+            <button
+              aria-label="警告を閉じる"
+              onClick={() => setWarningDismissed(true)}
+              className="shrink-0 text-yellow-600 hover:text-yellow-800"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
         {/* 返信元ツイート（reply 種別のみ） */}
         {draft.type === 'reply' && draft.source_tweet_text && (
           <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 space-y-0.5">

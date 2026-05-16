@@ -13,6 +13,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
+import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { Draft } from '@/types/app'
 
@@ -35,14 +36,21 @@ function formatJST(isoString: string): string {
   })
 }
 
-// datetime-local の min 値用に JST の現在時刻を返す
+// datetime-local の min 値用に JST の現在時刻を返す（Intl.DateTimeFormat でタイムゾーン安全に計算）
 function getJSTNow(): string {
   const now = new Date()
-  // JST = UTC+9
-  const jstOffset = 9 * 60
-  const localOffset = now.getTimezoneOffset()
-  const jstDate = new Date(now.getTime() + (jstOffset + localOffset) * 60 * 1000)
-  return jstDate.toISOString().slice(0, 16)
+  const parts = new Intl.DateTimeFormat('ja-JP', {
+    timeZone: 'Asia/Tokyo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(now)
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '00'
+  // datetime-local の値形式: "YYYY-MM-DDTHH:mm"
+  return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`
 }
 
 export default function SchedulePage() {
@@ -128,7 +136,7 @@ export default function SchedulePage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-bold">スケジュール管理</h1>
+      <h1 className="text-xl font-semibold tracking-[-0.02em] text-manavi-navy">スケジュール管理</h1>
 
       {/* 新規作成フォーム */}
       <Card>
@@ -159,14 +167,14 @@ export default function SchedulePage() {
               <label htmlFor="scheduled-at" className="text-sm font-medium text-gray-700">
                 投稿日時（日本時間）
               </label>
-              <input
+              <Input
                 id="scheduled-at"
                 type="datetime-local"
                 value={scheduledAt}
                 onChange={(e) => setScheduledAt(e.target.value)}
                 min={getJSTNow()}
                 required
-                className="block border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto"
+                className="w-full sm:w-auto"
               />
             </div>
 
@@ -182,11 +190,11 @@ export default function SchedulePage() {
 
       {/* スケジュール一覧 */}
       <div>
-        <h2 className="text-lg font-semibold mb-3">スケジュール一覧</h2>
+        <h2 className="text-base font-semibold text-manavi-navy mb-3">スケジュール一覧</h2>
         {loading ? (
-          <p className="text-gray-400 text-sm py-8 text-center">読み込み中...</p>
+          <p className="text-gray-400 text-sm py-8 text-center" aria-live="polite" aria-busy="true">読み込み中...</p>
         ) : posts.length === 0 ? (
-          <p className="text-gray-400 text-sm py-8 text-center">スケジュールはありません</p>
+          <p className="text-gray-400 text-sm py-8 text-center" aria-live="polite">スケジュールはありません</p>
         ) : (
           <div className="rounded-md border overflow-x-auto">
             <Table>

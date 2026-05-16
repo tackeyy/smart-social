@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import React from 'react'
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
@@ -38,7 +38,6 @@ describe('DraftCard', () => {
 
   it('作成日時が表示される', () => {
     render(React.createElement(DraftCard, { draft: makeDraft(), onStatusChange: vi.fn() }))
-    // 日時テキストが存在することを確認（フォーマットは locale 依存）
     const dateElements = screen.getAllByText(/2024/)
     expect(dateElements.length).toBeGreaterThan(0)
   })
@@ -49,5 +48,42 @@ describe('DraftCard', () => {
     )
     const header = container.querySelector('[class*="flex-wrap"]')
     expect(header).toBeTruthy()
+  })
+
+  describe('外部リンク警告バナー', () => {
+    it('外部URLを含むコンテンツの場合は警告バナーが表示される', () => {
+      render(React.createElement(DraftCard, {
+        draft: makeDraft({ content: '詳しくはこちら https://example.com をご覧ください' }),
+        onStatusChange: vi.fn(),
+      }))
+      expect(screen.getByRole('alert')).toBeTruthy()
+      expect(screen.getByText(/外部リンクを含む投稿はリーチが/)).toBeTruthy()
+    })
+
+    it('外部URLを含まないコンテンツの場合は警告バナーが表示されない', () => {
+      render(React.createElement(DraftCard, {
+        draft: makeDraft({ content: '普通のツイートです。URLはありません。' }),
+        onStatusChange: vi.fn(),
+      }))
+      expect(screen.queryByRole('alert')).toBeNull()
+    })
+
+    it('x.comのURLのみの場合は警告バナーが表示されない', () => {
+      render(React.createElement(DraftCard, {
+        draft: makeDraft({ content: 'こちらの投稿を参照 https://x.com/user/status/123' }),
+        onStatusChange: vi.fn(),
+      }))
+      expect(screen.queryByRole('alert')).toBeNull()
+    })
+
+    it('×ボタンで警告バナーを閉じることができる', () => {
+      render(React.createElement(DraftCard, {
+        draft: makeDraft({ content: '詳しくはこちら https://example.com をご覧ください' }),
+        onStatusChange: vi.fn(),
+      }))
+      const dismissButton = screen.getByRole('button', { name: '警告を閉じる' })
+      fireEvent.click(dismissButton)
+      expect(screen.queryByRole('alert')).toBeNull()
+    })
   })
 })
