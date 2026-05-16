@@ -92,5 +92,115 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.json({ processed: results.length, results })
+  // Auto-plug チェック（テーブルが未作成の場合はスキップ）
+  let autoPlugResults: Array<{ rule_id: string; tweet_id: string; status: string }> = []
+  try {
+    autoPlugResults = await runAutoPlug(supabase)
+  } catch (err) {
+    // auto_plug_rules テーブルが未作成等の場合はサイレントスキップ
+    console.warn('[cron/scheduler] auto-plug skipped:', err instanceof Error ? err.message : err)
+  }
+
+  return NextResponse.json({
+    processed: results.length,
+    results,
+    auto_plug: autoPlugResults,
+  })
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function runAutoPlug(supabase: any): Promise<Array<{ rule_id: string; tweet_id: string; status: string }>> {
+  const { data: rules, error: rulesError } = await supabase
+    .from('auto_plug_rules')
+    .select('*, x_accounts(access_token, access_token_secret)')
+    .eq('enabled', true)
+
+  if (rulesError) throw rulesError
+  if (!rules || rules.length === 0) return []
+
+  // 直近24時間の投稿済みツイートのメトリクスを確認
+  const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+
+  const plugResults: Array<{ rule_id: string; tweet_id: string; status: string }> = []
+
+  for (const rule of rules) {
+    try {
+      // 投稿済みドラフトを取得
+      const { data: drafts } = await supabase
+        .from('drafts')
+        .select('id, posted_tweet_id, user_id')
+        .eq('status', 'posted')
+        .eq('user_id', rule.user_id)
+        .gte('posted_at', since24h)
+        .not('posted_tweet_id', 'is', null)
+        .limit(10)
+
+      for (const draft of drafts ?? []) {
+        if (!draft.posted_tweet_id) continue
+
+        // 既に実行済みかチェック
+        const { data: existing } = await supabase
+          .from('auto_plug_executions')
+          .select('id')
+          .eq('rule_id', rule.id)
+          .eq('source_tweet_id', draft.posted_tweet_id)
+          .single()
+
+        if (existing) continue
+
+        // 実行回数チェック
+        const { count: execCount } = await supabase
+          .from('auto_plug_executions')
+          .select('*', { count: 'exact', head: true })
+          .eq('rule_id', rule.id)
+
+        if ((execCount ?? 0) >= rule.max_executions) continue
+
+        // X APIでメトリクス取得
+        const bearerToken = process.env.X_BEARER_TOKEN
+        if (!bearerToken) continue
+
+        const metricsRes = await fetch(
+          `https://api.x.com/2/tweets/${draft.posted_tweet_id}?tweet.fields=public_metrics`,
+          { headers: { Authorization: `Bearer ${bearerToken}` } }
+        )
+        if (!metricsRes.ok) continue
+
+        const metricsData = await metricsRes.json()
+        const metrics = metricsData?.data?.public_metrics
+        if (!metrics) continue
+
+        const metricValue = {
+          likes: metrics.like_count,
+          retweets: metrics.retweet_count,
+          replies: metrics.reply_count,
+        }[rule.threshold_type as 'likes' | 'retweets' | 'replies'] ?? 0
+
+        if (metricValue < rule.threshold_value) continue
+
+        // 閾値超過 → auto-plugリプライを投稿
+        const xAccount = Array.isArray(rule.x_accounts) ? rule.x_accounts[0] : rule.x_accounts
+        const tweet = await postTweet(
+          { text: rule.template_text, replyToId: draft.posted_tweet_id },
+          xAccount
+            ? { access_token: xAccount.access_token, access_token_secret: xAccount.access_token_secret }
+            : undefined
+        )
+
+        // 実行記録を保存
+        await supabase.from('auto_plug_executions').insert({
+          rule_id: rule.id,
+          source_tweet_id: draft.posted_tweet_id,
+          reply_tweet_id: tweet.id,
+        })
+
+        plugResults.push({ rule_id: rule.id, tweet_id: draft.posted_tweet_id, status: 'executed' })
+      }
+    } catch (err) {
+      console.error('[auto-plug] rule execution error:', { ruleId: rule.id, error: err })
+      plugResults.push({ rule_id: rule.id, tweet_id: '', status: 'error' })
+    }
+  }
+
+  return plugResults
 }
