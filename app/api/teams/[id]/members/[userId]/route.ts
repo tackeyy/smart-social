@@ -44,7 +44,10 @@ export async function PATCH(
     .select()
     .single()
 
-  if (error || !updated) {
+  if (!updated) {
+    return NextResponse.json({ error: 'メンバーが見つかりません' }, { status: 404 })
+  }
+  if (error) {
     console.error('[teams/[id]/members/[userId]] patch error:', error)
     return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 })
   }

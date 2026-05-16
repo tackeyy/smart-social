@@ -10,16 +10,17 @@ export async function GET(_request: Request) {
   }
 
   const { data, error } = await supabase
-    .from('teams')
-    .select('*')
-    .eq('created_by', user.id)
+    .from('team_members')
+    .select('teams(*)')
+    .eq('user_id', user.id)
 
   if (error) {
     console.error('[teams] fetch error:', error)
     return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 })
   }
 
-  return NextResponse.json(data ?? [])
+  const teams = (data ?? []).map((row: any) => row.teams).filter(Boolean)
+  return NextResponse.json(teams)
 }
 
 export async function POST(request: Request) {
@@ -62,6 +63,8 @@ export async function POST(request: Request) {
 
   if (memberError) {
     console.error('[teams] member insert error:', memberError)
+    // 補償トランザクション: team_members INSERT失敗時はteamsレコードを削除してロールバック
+    await supabase.from('teams').delete().eq('id', team.id)
     return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 })
   }
 

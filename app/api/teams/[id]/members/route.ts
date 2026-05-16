@@ -82,20 +82,28 @@ export async function POST(
   }
 
   // email でユーザーを検索（service_role key 使用）
+  // TODO: ユーザー数が増えた場合は auth.users を直接クエリするRPCに置き換えること
   const adminClient = getAdminClient()
-  const { data: usersData, error: listError } = await adminClient.auth.admin.listUsers()
+  const { data: usersData, error: listError } = await adminClient.auth.admin.listUsers({
+    perPage: 1000,
+  })
 
   if (listError) {
     console.error('[teams/[id]/members] list users error:', listError)
     return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 })
   }
 
-  const targetUser = usersData.users.find((u) => u.email === body.email)
+  const targetUser = usersData.users.find((u) => u.email === body.email.trim().toLowerCase())
   if (!targetUser) {
     return NextResponse.json({ error: '指定されたメールアドレスのユーザーが見つかりません' }, { status: 404 })
   }
 
-  const role = body.role && ['owner', 'admin', 'member'].includes(body.role) ? body.role : 'member'
+  // 招待者のroleに応じて付与可能なroleを制限（adminはownerを付与できない）
+  const allowedRoles = membership.role === 'owner'
+    ? ['owner', 'admin', 'member']
+    : ['admin', 'member']
+
+  const role = body.role && allowedRoles.includes(body.role) ? body.role : 'member'
 
   const { data: newMember, error: insertError } = await supabase
     .from('team_members')
@@ -109,6 +117,10 @@ export async function POST(
     .single()
 
   if (insertError) {
+    // unique constraint violation: すでにメンバーとして登録済み
+    if (insertError.code === '23505') {
+      return NextResponse.json({ error: '指定されたユーザーはすでにチームのメンバーです' }, { status: 409 })
+    }
     console.error('[teams/[id]/members] insert error:', insertError)
     return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 })
   }
