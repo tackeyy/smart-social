@@ -21,7 +21,8 @@ export async function GET(
     .single()
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 404 })
+    console.error('[drafts/[id]/route] fetch error:', error)
+    return NextResponse.json({ error: 'ドラフトが見つかりません' }, { status: 404 })
   }
 
   return NextResponse.json(data)
@@ -60,7 +61,8 @@ export async function PATCH(
     .single()
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error('[drafts/[id]/route] update error:', error)
+    return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 })
   }
 
   return NextResponse.json(data)
@@ -85,7 +87,8 @@ export async function DELETE(
     .eq('user_id', user.id)
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error('[drafts/[id]/route] delete error:', error)
+    return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 })
   }
 
   return new NextResponse(null, { status: 204 })

@@ -90,7 +90,7 @@ describe('GET /api/drafts/[id]', () => {
     const request = new Request('http://localhost/api/drafts/draft-1')
     await GET(request, makeParams('draft-1'))
     expect(mockNextResponseJson).toHaveBeenCalledWith(
-      { error: 'not found' },
+      { error: 'ドラフトが見つかりません' },
       { status: 404 }
     )
   })
@@ -164,7 +164,7 @@ describe('PATCH /api/drafts/[id]', () => {
     })
     await PATCH(request, makeParams('draft-1'))
     expect(mockNextResponseJson).toHaveBeenCalledWith(
-      { error: 'db error' },
+      { error: 'サーバーエラーが発生しました' },
       { status: 500 }
     )
   })
@@ -269,7 +269,7 @@ describe('DELETE /api/drafts/[id]', () => {
     const request = new Request('http://localhost/api/drafts/draft-1', { method: 'DELETE' })
     await DELETE(request, makeParams('draft-1'))
     expect(mockNextResponseJson).toHaveBeenCalledWith(
-      { error: 'db error' },
+      { error: 'サーバーエラーが発生しました' },
       { status: 500 }
     )
   })

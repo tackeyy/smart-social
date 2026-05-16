@@ -24,7 +24,8 @@ export async function DELETE(
     .single()
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error('[schedule/[id]/route] update error:', error)
+    return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 })
   }
 
   if (!data) {

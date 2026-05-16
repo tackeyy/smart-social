@@ -84,7 +84,7 @@ describe('GET /api/schedule', () => {
 
     await GET()
     expect(mockNextResponseJson).toHaveBeenCalledWith(
-      { error: 'db error' },
+      { error: 'サーバーエラーが発生しました' },
       { status: 500 }
     )
   })

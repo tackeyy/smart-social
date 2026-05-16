@@ -23,7 +23,8 @@ export async function POST(request: Request) {
   })
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error('[auth/send-magic-link/route] signInWithOtp error:', error)
+    return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 })
   }
 
   return NextResponse.json({ message: 'Magic link sent' })

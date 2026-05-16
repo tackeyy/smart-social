@@ -90,7 +90,7 @@ describe('DELETE /api/schedule/[id]', () => {
     const request = new Request('http://localhost/api/schedule/1', { method: 'DELETE' })
     await DELETE(request, makeParams('1'))
     expect(mockNextResponseJson).toHaveBeenCalledWith(
-      { error: 'db error' },
+      { error: 'サーバーエラーが発生しました' },
       { status: 500 }
     )
   })
