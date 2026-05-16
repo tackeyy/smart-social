@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 
 const X_API_BASE = 'https://api.x.com/2'
-const TWEET_URL_PATTERN = /(?:https?:\/\/)?(?:x|twitter)\.com\/\S+\/status\/(\d+)/
+const TWEET_URL_PATTERN = /^https?:\/\/(?:x|twitter)\.com\/\S+\/status\/(\d+)/
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -23,22 +23,27 @@ export async function GET(request: Request) {
 
   const tweetId = match[1]
 
-  const res = await fetch(
-    `${X_API_BASE}/tweets/${tweetId}?tweet.fields=text,author_id`,
-    { headers: { Authorization: `Bearer ${bearerToken}` } }
-  )
+  try {
+    const res = await fetch(
+      `${X_API_BASE}/tweets/${tweetId}?tweet.fields=text,author_id`,
+      { headers: { Authorization: `Bearer ${bearerToken}` } }
+    )
 
-  const json = await res.json()
+    const json = await res.json()
 
-  if (!res.ok) {
-    const message = json.errors?.[0]?.message ?? `X API error: ${res.status}`
-    const status = res.status === 404 ? 404 : 502
-    return NextResponse.json({ error: message }, { status })
+    if (!res.ok) {
+      const message = json.errors?.[0]?.message ?? `X API error: ${res.status}`
+      const status = res.status === 404 ? 404 : 502
+      return NextResponse.json({ error: message }, { status })
+    }
+
+    return NextResponse.json({
+      tweet_id: json.data.id,
+      text: json.data.text,
+      author_id: json.data.author_id ?? null,
+    })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to fetch tweet'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
-
-  return NextResponse.json({
-    tweet_id: json.data.id,
-    text: json.data.text,
-    author_id: json.data.author_id ?? null,
-  })
 }

@@ -54,7 +54,7 @@ function AnalyticsContent() {
     }
 
     void load()
-  }, [])
+  }, [accountId])
 
   // 集計サマリー
   const totalImpressions = metrics.reduce((sum, m) => sum + m.impression_count, 0)

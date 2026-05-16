@@ -59,4 +59,32 @@ describe('AnalyticsPage', () => {
 
     expect(screen.getByText('データを取得中...')).toBeTruthy()
   })
+
+  it('account_id が変わった場合は新しい x_account_id で再fetchする', async () => {
+    // 最初のレンダリング（account_id なし）
+    mockUseSearchParams.mockReturnValue(makeSearchParams({}))
+    const { rerender } = render(
+      React.createElement(Suspense, { fallback: null }, React.createElement(AnalyticsPage))
+    )
+
+    await waitFor(() => {
+      const calls = (global.fetch as ReturnType<typeof vi.fn>).mock.calls
+      expect(calls.length).toBeGreaterThan(0)
+    })
+
+    const callsBefore = (global.fetch as ReturnType<typeof vi.fn>).mock.calls.length
+
+    // account_id=99 に切り替え
+    mockUseSearchParams.mockReturnValue(makeSearchParams({ account_id: '99' }))
+    rerender(
+      React.createElement(Suspense, { fallback: null }, React.createElement(AnalyticsPage))
+    )
+
+    await waitFor(() => {
+      const calls = (global.fetch as ReturnType<typeof vi.fn>).mock.calls
+      expect(calls.length).toBeGreaterThan(callsBefore)
+      const lastUrl = calls[calls.length - 1][0] as string
+      expect(lastUrl).toContain('x_account_id=99')
+    })
+  })
 })

@@ -113,4 +113,30 @@ describe('GET /api/x/lookup-tweet', () => {
       { status: 404 }
     )
   })
+
+  it('X API へのネットワーク障害時は500を返す', async () => {
+    global.fetch = vi.fn().mockRejectedValue(new TypeError('fetch failed'))
+
+    const request = new Request(
+      'http://localhost/api/x/lookup-tweet?url=https://x.com/user/status/12345'
+    )
+    await GET(request)
+
+    expect(mockNextResponseJson).toHaveBeenCalledWith(
+      expect.objectContaining({ error: 'fetch failed' }),
+      { status: 500 }
+    )
+  })
+
+  it('サブドメイン付きURL (attacker.com/x.com/...) は Invalid tweet URL になる', async () => {
+    const request = new Request(
+      'http://localhost/api/x/lookup-tweet?url=http://attacker.com/x.com/user/status/12345'
+    )
+    await GET(request)
+
+    expect(mockNextResponseJson).toHaveBeenCalledWith(
+      { error: 'Invalid tweet URL' },
+      { status: 400 }
+    )
+  })
 })
