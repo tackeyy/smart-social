@@ -106,7 +106,7 @@ export function DraftCard({ draft, onStatusChange }: DraftCardProps) {
 
   return (
     <Card className="w-full">
-      <CardHeader className="pb-2 flex flex-row items-center justify-between">
+      <CardHeader className="pb-2 flex flex-row flex-wrap items-center justify-between gap-y-1">
         <div className="flex items-center gap-2">
           <Badge variant={status.variant}>{status.label}</Badge>
           {draft.posted_at && (
