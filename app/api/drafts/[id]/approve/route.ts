@@ -14,10 +14,20 @@ export async function POST(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // reply_drafts は x_account_id 経由でユーザーに紐づくため、
+  // ユーザーが所有する x_account_ids を先に取得して所有権を確認する
+  const { data: accounts } = await supabase
+    .from('x_accounts')
+    .select('id')
+    .eq('user_id', user.id)
+
+  const accountIds = accounts?.map(a => a.id) ?? []
+
   const { data: draft, error: fetchError } = await supabase
-    .from('drafts')
+    .from('reply_drafts')
     .select('*')
     .eq('id', id)
+    .in('x_account_id', accountIds)  // 所有権確認
     .single()
 
   if (fetchError?.code === 'PGRST116' || !draft) {
@@ -35,12 +45,25 @@ export async function POST(
   try {
     const tweet = await postTweet({ text: draft.content })
 
-    const { data: updated } = await supabase
-      .from('drafts')
+    const { data: updated, error: updateError } = await supabase
+      .from('reply_drafts')
       .update({ status: 'posted', posted_tweet_id: tweet.id, posted_at: new Date().toISOString() })
       .eq('id', id)
       .select()
       .single()
+
+    if (updateError) {
+      // ツイートは投稿済みなので DB との不整合をログに記録して警告付きで返す
+      console.error('Tweet posted but DB update failed', {
+        tweetId: tweet.id,
+        draftId: id,
+        error: updateError,
+      })
+      return NextResponse.json(
+        { ...draft, status: 'posted', posted_tweet_id: tweet.id, warning: 'DB sync failed' },
+        { status: 200 }
+      )
+    }
 
     return NextResponse.json(updated ?? { ...draft, status: 'posted', posted_tweet_id: tweet.id })
   } catch (err) {
