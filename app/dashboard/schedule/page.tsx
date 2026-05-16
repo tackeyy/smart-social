@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { Draft } from '@/types/app'
 import { Skeleton } from '@/components/ui/skeleton'
+import { ScheduleCalendarView } from './_components/ScheduleCalendarView'
 
 const STATUS_LABEL: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   scheduled: { label: '待機中', variant: 'secondary' },
@@ -54,9 +55,12 @@ function getJSTNow(): string {
   return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`
 }
 
+type TabType = 'table' | 'calendar'
+
 export default function SchedulePage() {
   const [posts, setPosts] = useState<Draft[]>([])
   const [loading, setLoading] = useState(true)
+  const [tab, setTab] = useState<TabType>('table')
 
   // 新規作成フォーム state
   const [text, setText] = useState('')
@@ -191,8 +195,39 @@ export default function SchedulePage() {
 
       {/* スケジュール一覧 */}
       <div>
-        <h2 className="text-base font-semibold text-manavi-navy mb-3">スケジュール一覧</h2>
-        {loading ? (
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-semibold text-manavi-navy">スケジュール一覧</h2>
+          <div className="flex gap-1">
+            <Button
+              size="sm"
+              variant={tab === 'table' ? 'default' : 'outline'}
+              onClick={() => setTab('table')}
+              aria-pressed={tab === 'table'}
+            >
+              リスト
+            </Button>
+            <Button
+              size="sm"
+              variant={tab === 'calendar' ? 'default' : 'outline'}
+              onClick={() => setTab('calendar')}
+              aria-pressed={tab === 'calendar'}
+            >
+              カレンダー
+            </Button>
+          </div>
+        </div>
+
+        {tab === 'calendar' ? (
+          loading ? (
+            <div className="space-y-2" aria-live="polite" aria-busy="true">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-12" />
+              ))}
+            </div>
+          ) : (
+            <ScheduleCalendarView posts={posts} onCancel={handleCancel} />
+          )
+        ) : loading ? (
           <div className="space-y-2" aria-live="polite" aria-busy="true">
             {Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} className="h-12" />
