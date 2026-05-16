@@ -1,0 +1,109 @@
+import Anthropic from '@anthropic-ai/sdk'
+
+export type PrecheckDecision = 'auto_pass' | 'manual_review' | 'blocked'
+export type TemplateChannel = 'post' | 'reply' | 'dm'
+export type RuleSeverity = 'critical' | 'major' | 'minor'
+
+export interface PrecheckRule {
+  category: string
+  severity: RuleSeverity
+  message: string
+}
+
+export interface PrecheckResult {
+  decision: PrecheckDecision
+  score: number
+  reasons: string[]
+  suggestions: string[]
+}
+
+const MAX_CHARS = 280
+
+export function check280CharLimit(text: string): PrecheckRule | null {
+  if (text.length <= MAX_CHARS) return null
+  return {
+    category: 'char_limit',
+    severity: 'critical',
+    message: `文字数が${text.length}文字です（上限${MAX_CHARS}文字）`,
+  }
+}
+
+const SYSTEM_PROMPT = `あなたはX（Twitter）投稿品質チェックの専門家です。
+特に税理士・会計士・士業向けの投稿コンプライアンスに詳しく、以下の基準で投稿テキストを審査します。
+
+## 判定基準
+
+### blocked（実行禁止）
+- 断定的税務助言：「〜すれば節税できます」「絶対に〜」「必ず〜」等の確定表現
+- 根拠のない法令解釈の断言
+- 攻撃的・煽り表現、特定個人・組織への誹謗中傷
+
+### manual_review（要確認）
+- 根拠が不明確な数値や制度解説
+- グレーゾーンの税務判断
+- 出典なしの統計引用
+
+### auto_pass（問題なし）
+- 上記に該当しない、適切な情報提供
+- 「〜の可能性があります」「一般的には〜」等の適切な留保表現
+
+## 出力形式（必ずJSONのみ返すこと）
+{
+  "decision": "auto_pass" | "manual_review" | "blocked",
+  "score": 0-100,
+  "reasons": ["理由1", "理由2"],
+  "suggestions": ["改善提案1", "改善提案2"]
+}`
+
+export async function runPrecheck(
+  text: string,
+  channel: TemplateChannel
+): Promise<PrecheckResult> {
+  const charLimitRule = check280CharLimit(text)
+  if (charLimitRule) {
+    return {
+      decision: 'blocked',
+      score: 0,
+      reasons: [charLimitRule.message],
+      suggestions: [`${text.length - MAX_CHARS}文字削減してください`],
+    }
+  }
+
+  const client = new Anthropic()
+
+  try {
+    const message = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 512,
+      system: SYSTEM_PROMPT,
+      messages: [
+        {
+          role: 'user',
+          content: `以下の${channel}投稿を審査してください:\n\n${text}`,
+        },
+      ],
+    })
+
+    const rawText = message.content[0].type === 'text' ? message.content[0].text : ''
+
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) throw new Error('JSON not found in response')
+
+    const parsed = JSON.parse(jsonMatch[0]) as PrecheckResult
+    const score = Math.max(0, Math.min(100, Number(parsed.score) || 50))
+
+    return {
+      decision: parsed.decision ?? 'manual_review',
+      score,
+      reasons: Array.isArray(parsed.reasons) ? parsed.reasons : [],
+      suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
+    }
+  } catch {
+    return {
+      decision: 'manual_review',
+      score: 50,
+      reasons: ['自動チェックを完了できませんでした。内容を確認してください。'],
+      suggestions: [],
+    }
+  }
+}
