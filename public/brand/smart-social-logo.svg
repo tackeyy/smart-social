@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 60">
+  <defs>
+    <linearGradient id="ss-grad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0083FF"/>
+      <stop offset="100%" stop-color="#00B4D8"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Icon 48×48 -->
+  <g transform="translate(6, 6)">
+    <rect width="48" height="48" rx="11" fill="url(#ss-grad)"/>
+
+    <!-- 吹き出し（メイン） -->
+    <path d="M10 13 Q10 10 13 10 L35 10 Q38 10 38 13 L38 27 Q38 30 35 30 L22 30 L16 38 L16 30 L13 30 Q10 30 10 27 Z"
+          fill="white" opacity="0.95"/>
+
+    <!-- 稲妻マーク（吹き出し内） -->
+    <path d="M27 14 L21 24 L25 24 L21 34 L29 22 L25 22 Z"
+          fill="url(#ss-grad)"/>
+  </g>
+
+  <!-- "Smart" テキスト -->
+  <text x="66" y="40"
+        font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif"
+        font-size="34" fill="#1265B3" font-weight="700" letter-spacing="-0.02em">Smart</text>
+
+  <!-- "Social" テキスト -->
+  <text x="160" y="40"
+        font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif"
+        font-size="34" fill="#1265B3" font-weight="500" letter-spacing="-0.02em">Social</text>
+</svg>
