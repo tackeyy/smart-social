@@ -14,7 +14,7 @@ export default async function DashboardLayout({
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    redirect('/smart-social/auth/login')
+    redirect('/auth/login')
   }
 
   const { data: accounts } = await supabase
@@ -26,7 +26,7 @@ export default async function DashboardLayout({
   const xAccounts = (accounts ?? []) as XAccount[]
 
   if (xAccounts.length === 0) {
-    redirect('/smart-social/setup')
+    redirect('/setup')
   }
 
   const currentAccount = xAccounts[0]
@@ -37,23 +37,23 @@ export default async function DashboardLayout({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center space-x-8">
-              <Link href="/smart-social/dashboard" className="font-bold text-lg">
+              <Link href="/dashboard" className="font-bold text-lg">
                 Smart Social
               </Link>
               <Link
-                href="/smart-social/dashboard"
+                href="/dashboard"
                 className="text-sm text-gray-600 hover:text-gray-900"
               >
                 ダッシュボード
               </Link>
               <Link
-                href="/smart-social/dashboard/drafts"
+                href="/dashboard/drafts"
                 className="text-sm text-gray-600 hover:text-gray-900"
               >
                 ドラフト
               </Link>
               <Link
-                href="/smart-social/dashboard/schedule"
+                href="/dashboard/schedule"
                 className="text-sm text-gray-600 hover:text-gray-900"
               >
                 スケジュール

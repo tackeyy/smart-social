@@ -55,7 +55,7 @@ export default function SetupPage() {
         )
       }
 
-      router.push('/smart-social/dashboard/drafts')
+      router.push('/dashboard/drafts')
     } catch (err) {
       setError(err instanceof Error ? err.message : '設定に失敗しました')
     } finally {

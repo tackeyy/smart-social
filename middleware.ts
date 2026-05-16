@@ -36,8 +36,10 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // ダッシュボードへのアクセスは認証必須
-  if (!user && (pathname.startsWith('/smart-social/dashboard') || pathname.startsWith('/smart-social/setup'))) {
-    return NextResponse.redirect(new URL('/smart-social/auth/login', request.url))
+  if (!user && (pathname.startsWith('/dashboard') || pathname.startsWith('/setup'))) {
+    const loginUrl = request.nextUrl.clone()
+    loginUrl.pathname = '/auth/login'
+    return NextResponse.redirect(loginUrl)
   }
 
   return supabaseResponse

@@ -10,7 +10,7 @@ export default async function DashboardPage() {
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
-    redirect('/smart-social/auth/login')
+    redirect('/auth/login')
   }
 
   const today = new Date()
@@ -71,7 +71,7 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Link
-          href="/smart-social/dashboard/drafts"
+          href="/dashboard/drafts"
           className="block p-4 bg-white border border-gray-200 rounded-lg hover:border-blue-400 hover:shadow-sm transition-all"
         >
           <h2 className="font-semibold mb-1">ドラフト管理</h2>
@@ -79,7 +79,7 @@ export default async function DashboardPage() {
         </Link>
 
         <Link
-          href="/smart-social/dashboard/schedule"
+          href="/dashboard/schedule"
           className="block p-4 bg-white border border-gray-200 rounded-lg hover:border-blue-400 hover:shadow-sm transition-all"
         >
           <h2 className="font-semibold mb-1">スケジュール管理</h2>
