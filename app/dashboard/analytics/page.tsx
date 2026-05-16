@@ -14,6 +14,7 @@ import {
 import type { TweetMetrics } from '@/lib/x/analytics'
 import type { UserStats } from '@/app/api/x/user-stats/route'
 import { Skeleton } from '@/components/ui/skeleton'
+import { analyzeOptimalPostingTimes } from '@/lib/analytics/optimal-posting-time'
 
 const TEXT_PREVIEW_LENGTH = 60
 
@@ -110,6 +111,8 @@ function AnalyticsContent() {
 
   const sorted = [...metrics].sort((a, b) => b[sortKey] - a[sortKey])
   const maxScore = Math.max(...metrics.map(m => m.engagement_score), 0)
+  const optimalTimes = analyzeOptimalPostingTimes(metrics)
+  const maxOptimalScore = Math.max(...optimalTimes.map(t => t.avg_score), 0)
 
   const totalImpressions = metrics.reduce((sum, m) => sum + m.impression_count, 0)
   const totalLikes = metrics.reduce((sum, m) => sum + m.like_count, 0)
@@ -259,6 +262,35 @@ function AnalyticsContent() {
                       <p className="text-xs text-gray-700 truncate mb-1" title={m.text}>{m.text}</p>
                       <ScoreBar score={m.engagement_score} max={maxScore} />
                     </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* 最適投稿時間 */}
+          {optimalTimes.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">最適投稿時間（JST）</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <p className="text-xs text-gray-500 mb-3">過去{maxResults}件のデータから算出したエンゲージメントスコア平均</p>
+                {optimalTimes.map((t, idx) => (
+                  <div key={t.hour} className="flex items-center gap-3">
+                    <span className="text-xs font-bold text-manavi-navy-light w-4 shrink-0">#{idx + 1}</span>
+                    <span className="text-sm font-semibold tabular-nums text-manavi-navy w-16 shrink-0">
+                      {String(t.hour).padStart(2, '0')}:00
+                    </span>
+                    <div className="flex-1 bg-gray-100 rounded-full h-2">
+                      <div
+                        className="bg-green-500 rounded-full h-2 transition-all duration-300"
+                        style={{ width: maxOptimalScore > 0 ? `${(t.avg_score / maxOptimalScore) * 100}%` : '0%' }}
+                      />
+                    </div>
+                    <span className="text-xs text-gray-500 shrink-0 w-24 text-right">
+                      avg {Math.round(t.avg_score)} ({t.count}件)
+                    </span>
                   </div>
                 ))}
               </CardContent>
