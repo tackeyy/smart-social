@@ -31,19 +31,25 @@ const makeFullRule = (overrides?: object) => ({
 /**
  * Supabase クライアントのモック生成
  * - lte().select() でルール一覧を返す
- * - insert / update は成功扱い
+ * - insert は insertResult（デフォルト成功）を返す
+ * - update は楽観的ロック対応: .eq().eq().select().single() チェーンで updated を返す
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function makeSupabase(rules: object[]) {
+function makeSupabase(rules: object[], options?: { insertError?: object | null; updateResult?: { data: object | null; error: object | null } }) {
+  const insertError = options?.insertError ?? null
+  const updateResult = options?.updateResult ?? { data: { id: 'rule-uuid-1' }, error: null }
+
   const selectChain = {
     eq: vi.fn().mockReturnThis(),
     lte: vi.fn().mockResolvedValue({ data: rules, error: null }),
   }
   const updateChain = {
-    eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+    eq: vi.fn().mockReturnThis(),
+    select: vi.fn().mockReturnThis(),
+    single: vi.fn().mockResolvedValue(updateResult),
   }
   const insertChain = {
-    insert: vi.fn().mockResolvedValue({ error: null }),
+    insert: vi.fn().mockResolvedValue({ error: insertError }),
   }
   return {
     from: vi.fn((table: string) => {
@@ -78,6 +84,13 @@ describe('runEvergreen', () => {
     const supabase = makeSupabase([rule])
     const results = await runEvergreen(supabase)
     expect(results).toEqual([{ rule_id: rule.id, status: 'drafted' }])
+  })
+
+  it('draft INSERT 失敗時は error を返す', async () => {
+    const rule = makeFullRule()
+    const supabase = makeSupabase([rule], { insertError: { message: 'insert failed', code: '23505' } })
+    const results = await runEvergreen(supabase)
+    expect(results).toEqual([{ rule_id: rule.id, status: 'error' }])
   })
 })
 
