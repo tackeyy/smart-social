@@ -1,6 +1,49 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
+  }
+
+  const body = await request.json()
+
+  if (!body.scheduled_at) {
+    return NextResponse.json({ error: 'scheduled_at は必須です' }, { status: 400 })
+  }
+  const scheduledAt = new Date(body.scheduled_at)
+  if (isNaN(scheduledAt.getTime()) || scheduledAt <= new Date()) {
+    return NextResponse.json({ error: '過去の日時は指定できません' }, { status: 400 })
+  }
+
+  const { data, error } = await supabase
+    .from('drafts')
+    .update({ scheduled_at: body.scheduled_at })
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .eq('status', 'scheduled')
+    .select()
+    .single()
+
+  if (error) {
+    console.error('[schedule/[id]/route] patch error:', error)
+    return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 })
+  }
+
+  if (!data) {
+    return NextResponse.json({ error: 'スケジュール済みの投稿が見つかりません' }, { status: 404 })
+  }
+
+  return NextResponse.json(data)
+}
+
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
