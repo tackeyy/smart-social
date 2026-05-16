@@ -15,12 +15,3 @@ otp_length = 8
 [auth.mfa.totp]
 enroll_enabled = true
 verify_enabled = true
-
-[auth.smtp]
-enabled = true
-host = "smtp.resend.com"
-port = 465
-user = "resend"
-pass = "env(RESEND_SMTP_PASSWORD)"
-admin_email = "noreply@zeimu.ai"
-sender_name = "Smart Social"

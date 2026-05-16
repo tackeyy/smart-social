@@ -62,14 +62,19 @@ export async function POST(request: Request) {
     const profileData = await generateStyleProfile(tweets.map(t => t.text))
 
     // style_profiles に保存
-    const { data: savedProfile } = await supabase
+    const { error: upsertError } = await supabase
       .from('style_profiles')
       .upsert(
         { x_account_id: body.x_account_id, profile_data: profileData, model_version: 'claude-sonnet-4-6', analyzed_at: new Date().toISOString() },
         { onConflict: 'x_account_id' }
       )
 
-    return NextResponse.json({ profile: savedProfile ?? profileData })
+    if (upsertError) {
+      console.error('[profile/generate] upsert error:', upsertError)
+      return NextResponse.json({ error: 'プロファイルの保存に失敗しました: ' + upsertError.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ profile: profileData })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to generate profile'
     return NextResponse.json({ error: message }, { status: 500 })
