@@ -62,7 +62,12 @@ export async function PATCH(
     return NextResponse.json({ error: 'オーナーのみ変更できます' }, { status: 403 })
   }
 
-  const body = await request.json().catch(() => ({}))
+  let body: { name?: string }
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'リクエストの形式が不正です' }, { status: 400 })
+  }
   const name = typeof body.name === 'string' ? body.name.trim() : undefined
 
   if (!name || name.length === 0) {
