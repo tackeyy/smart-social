@@ -118,7 +118,7 @@ function MentionsContent() {
       )}
 
       {!loading && !error && mentions.length === 0 && (
-        <p className="text-center text-gray-400 py-12 text-sm">メンションがありません</p>
+        <p className="text-center text-manavi-muted py-12 text-sm">メンションがありません</p>
       )}
 
       {!loading && !error && mentions.length > 0 && (
@@ -135,7 +135,7 @@ function MentionsContent() {
                   )}
                   <p className="text-sm whitespace-pre-wrap leading-relaxed">{mention.text}</p>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-manavi-muted">
                       {new Date(mention.created_at).toLocaleString('ja-JP')}
                     </span>
                     <div className="flex items-center gap-2">

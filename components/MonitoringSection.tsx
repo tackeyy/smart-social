@@ -77,7 +77,7 @@ export function MonitoringSection({ initialDrafts = [] }: MonitoringSectionProps
           const remaining = remainingMinutes(d.posted_at!)
           return (
             <div key={d.id} className="flex items-start justify-between gap-2 rounded-md bg-white border border-orange-100 px-3 py-2">
-              <p className="text-xs text-gray-700 line-clamp-2 flex-1">{d.content}</p>
+              <p className="text-xs text-manavi-navy-light line-clamp-2 flex-1">{d.content}</p>
               <div className="flex flex-col items-end gap-1 shrink-0">
                 <Badge variant={urgencyVariant(elapsed)} className="text-xs">
                   残{remaining}分
@@ -96,7 +96,7 @@ export function MonitoringSection({ initialDrafts = [] }: MonitoringSectionProps
             </div>
           )
         })}
-        <p className="text-xs text-gray-400" suppressHydrationWarning>
+        <p className="text-xs text-manavi-muted" suppressHydrationWarning>
           30秒ごとに自動更新 — 最終更新: {new Date(now).toLocaleTimeString('ja-JP')}
         </p>
       </CardContent>

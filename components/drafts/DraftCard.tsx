@@ -173,15 +173,15 @@ export function DraftCard({ draft, onStatusChange }: DraftCardProps) {
         <div className="flex items-center gap-2 flex-wrap">
           <Badge variant={status.variant}>{status.label}</Badge>
           {status.description && (
-            <span className="text-xs text-gray-500">{status.description}</span>
+            <span className="text-xs text-manavi-muted">{status.description}</span>
           )}
           {draft.posted_at && (
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-manavi-muted">
               投稿: {new Date(draft.posted_at).toLocaleString('ja-JP')}
             </span>
           )}
         </div>
-        <span className="text-xs text-gray-400">
+        <span className="text-xs text-manavi-muted">
           {new Date(draft.created_at).toLocaleString('ja-JP')}
         </span>
       </CardHeader>
@@ -206,9 +206,9 @@ export function DraftCard({ draft, onStatusChange }: DraftCardProps) {
 
         {/* 返信元ツイート（reply 種別のみ） */}
         {draft.type === 'reply' && draft.source_tweet_text && (
-          <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 space-y-0.5">
-            <p className="text-xs font-medium text-gray-500">返信元ツイート</p>
-            <p className="text-xs text-gray-600 whitespace-pre-wrap leading-relaxed line-clamp-3">
+          <div className="rounded-md border border-manavi-border bg-manavi-bg px-3 py-2 space-y-0.5">
+            <p className="text-xs font-medium text-manavi-muted">返信元ツイート</p>
+            <p className="text-xs text-manavi-navy-light whitespace-pre-wrap leading-relaxed line-clamp-3">
               {draft.source_tweet_text}
             </p>
             {draft.source_tweet_id && (
@@ -235,7 +235,7 @@ export function DraftCard({ draft, onStatusChange }: DraftCardProps) {
             />
             <div className="flex justify-between items-center">
               <span
-                className={`text-xs ${isOverLimit ? 'text-red-500 font-medium' : 'text-gray-400'}`}
+                className={`text-xs ${isOverLimit ? 'text-red-500 font-medium' : 'text-manavi-muted'}`}
                 aria-live="polite"
               >
                 {charCount} / {MAX_CHARS}
@@ -265,7 +265,7 @@ export function DraftCard({ draft, onStatusChange }: DraftCardProps) {
         ) : (
           <div className="space-y-1">
             <p className="text-sm whitespace-pre-wrap leading-relaxed">{content}</p>
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-manavi-muted">
               {charCount} 文字
             </span>
           </div>
@@ -274,7 +274,7 @@ export function DraftCard({ draft, onStatusChange }: DraftCardProps) {
         {/* AI候補一覧（reply 種別かつ候補が存在する場合） */}
         {draft.type === 'reply' && draft.ai_candidates && draft.ai_candidates.length > 0 && (
           <div className="space-y-1.5">
-            <p className="text-xs font-medium text-gray-500">AI生成候補</p>
+            <p className="text-xs font-medium text-manavi-muted">AI生成候補</p>
             <ol className="space-y-1">
               {draft.ai_candidates.map((candidate, idx) => (
                 <li
@@ -282,7 +282,7 @@ export function DraftCard({ draft, onStatusChange }: DraftCardProps) {
                   className={`rounded-md border px-3 py-2 text-xs whitespace-pre-wrap leading-relaxed ${
                     draft.selected_index === idx
                       ? 'border-blue-400 bg-blue-50 text-blue-900'
-                      : 'border-gray-200 bg-white text-gray-700'
+                      : 'border-manavi-border bg-white text-manavi-navy-light'
                   }`}
                   aria-label={`候補 ${idx + 1}${draft.selected_index === idx ? '（選択中）' : ''}`}
                 >
@@ -317,7 +317,7 @@ export function DraftCard({ draft, onStatusChange }: DraftCardProps) {
               <img
                 src={mediaPreviewUrl}
                 alt="添付画像プレビュー"
-                className="h-24 w-24 rounded-md object-cover border border-gray-200"
+                className="h-24 w-24 rounded-md object-cover border border-manavi-border"
               />
               <button
                 onClick={handleRemoveMedia}

@@ -117,7 +117,7 @@ function TimelineContent() {
       )}
 
       {!loading && !error && tweets.length === 0 && (
-        <p className="text-center text-gray-400 py-12 text-sm">ツイートがありません</p>
+        <p className="text-center text-manavi-muted py-12 text-sm">ツイートがありません</p>
       )}
 
       {!loading && !error && tweets.length > 0 && (
@@ -127,7 +127,7 @@ function TimelineContent() {
               <CardContent className="pt-4 pb-3 px-4 space-y-3">
                 <p className="text-sm whitespace-pre-wrap leading-relaxed">{tweet.text}</p>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-manavi-muted">
                     {new Date(tweet.created_at).toLocaleString('ja-JP')}
                   </span>
                   <div className="flex items-center gap-2">
