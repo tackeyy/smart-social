@@ -34,7 +34,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'X_BEARER_TOKEN が設定されていません' }, { status: 500 })
   }
 
-  const timelineUrl = `${X_API_BASE}/users/${account.x_user_id}/tweets?max_results=${maxResults}&tweet.fields=id,text,created_at`
+  const paginationToken = url.searchParams.get('pagination_token')
+  const timelineParams = new URLSearchParams({
+    max_results: String(maxResults),
+    'tweet.fields': 'id,text,created_at',
+  })
+  if (paginationToken) timelineParams.set('pagination_token', paginationToken)
+
+  const timelineUrl = `${X_API_BASE}/users/${account.x_user_id}/tweets?${timelineParams.toString()}`
 
   try {
     const response = await fetch(timelineUrl, {

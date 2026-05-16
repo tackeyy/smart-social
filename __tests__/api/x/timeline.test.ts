@@ -215,4 +215,83 @@ describe('GET /api/x/timeline', () => {
       { status: 404 }
     )
   })
+
+  it('?pagination_token が指定された場合、X API URL に pagination_token が含まれる', async () => {
+    // Arrange
+    mockCreateClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1' } },
+          error: null,
+        }),
+      },
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({
+          data: [{ x_user_id: 'x-user-123', access_token: 'token-abc' }],
+          error: null,
+        }),
+      }),
+    } as any)
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        data: [],
+        meta: { result_count: 0, next_token: 'next-page-token-xyz' },
+      }),
+    })
+
+    const request = new Request('http://localhost/api/x/timeline?pagination_token=prev-token-abc')
+
+    // Act
+    await GET(request)
+
+    // Assert: X API に pagination_token が渡されること
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('pagination_token=prev-token-abc'),
+      expect.any(Object)
+    )
+  })
+
+  it('X API が next_token を返した場合、レスポンスの meta に含まれる', async () => {
+    // Arrange
+    mockCreateClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1' } },
+          error: null,
+        }),
+      },
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({
+          data: [{ x_user_id: 'x-user-123', access_token: 'token-abc' }],
+          error: null,
+        }),
+      }),
+    } as any)
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        data: [{ id: 'tweet-1', text: 'Hello' }],
+        meta: { result_count: 1, next_token: 'next-page-token-xyz' },
+      }),
+    })
+
+    const request = new Request('http://localhost/api/x/timeline')
+
+    // Act
+    await GET(request)
+
+    // Assert: レスポンスに meta.next_token が含まれること
+    expect(mockNextResponseJson).toHaveBeenCalledWith(
+      expect.objectContaining({
+        meta: expect.objectContaining({ next_token: 'next-page-token-xyz' }),
+      })
+    )
+  })
 })
