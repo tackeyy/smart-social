@@ -2,6 +2,7 @@ import { timingSafeEqual } from 'crypto'
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { postTweet } from '@/lib/x/client'
+import { runEvergreen } from '@/lib/evergreen/scheduler'
 
 // Vercel Cron から毎分呼び出される
 export async function GET(request: Request) {
@@ -101,10 +102,19 @@ export async function GET(request: Request) {
     console.warn('[cron/scheduler] auto-plug skipped:', err instanceof Error ? err.message : err)
   }
 
+  // Evergreen 再投稿チェック（テーブルが未作成の場合はスキップ）
+  let evergreenResults: Array<{ rule_id: string; status: string }> = []
+  try {
+    evergreenResults = await runEvergreen(supabase)
+  } catch (err) {
+    console.warn('[cron/scheduler] evergreen skipped:', err instanceof Error ? err.message : err)
+  }
+
   return NextResponse.json({
     processed: results.length,
     results,
     auto_plug: autoPlugResults,
+    evergreen: evergreenResults,
   })
 }
 
