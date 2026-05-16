@@ -44,6 +44,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: message }, { status })
     }
 
+    if (!json.data?.id) {
+      return NextResponse.json({ error: 'Unexpected X API response' }, { status: 502 })
+    }
+
     return NextResponse.json({
       tweet_id: json.data.id,
       text: json.data.text,

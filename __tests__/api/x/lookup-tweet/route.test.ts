@@ -170,6 +170,24 @@ describe('GET /api/x/lookup-tweet', () => {
     )
   })
 
+  it('X API が ok:true でも data フィールドなしの場合は502を返す', async () => {
+    mockAuthenticated()
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ meta: { result_count: 0 } }), // data field missing
+    })
+
+    const request = new Request(
+      'http://localhost/api/x/lookup-tweet?url=https://x.com/user/status/12345'
+    )
+    await GET(request)
+
+    expect(mockNextResponseJson).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.any(String) }),
+      { status: 502 }
+    )
+  })
+
   it('サブドメイン付きURL (attacker.com/x.com/...) は Invalid tweet URL になる', async () => {
     mockAuthenticated()
     const request = new Request(
