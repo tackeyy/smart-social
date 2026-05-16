@@ -36,6 +36,22 @@ export async function PATCH(
     )
   }
 
+  // 自分自身のownerロールを降格しようとしている場合のガード
+  if (userId === user.id && membership.role === 'owner' && role !== 'owner') {
+    const { data: owners } = await supabase
+      .from('team_members')
+      .select('user_id')
+      .eq('team_id', id)
+      .eq('role', 'owner')
+
+    if (!owners || owners.length <= 1) {
+      return NextResponse.json(
+        { error: 'オーナーが1人のときは自分のロールを変更できません' },
+        { status: 400 }
+      )
+    }
+  }
+
   const { data: updated, error } = await supabase
     .from('team_members')
     .update({ role: role as TeamRole })
