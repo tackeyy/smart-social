@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/smart-social/api/cron/scheduler",
+      "schedule": "* * * * *"
+    }
+  ]
+}
