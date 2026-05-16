@@ -12,6 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import type { TweetMetrics } from '@/lib/x/analytics'
+import type { UserStats } from '@/app/api/x/user-stats/route'
 import { Skeleton } from '@/components/ui/skeleton'
 
 const TEXT_PREVIEW_LENGTH = 60
@@ -66,6 +67,7 @@ function AnalyticsContent() {
   const accountId = searchParams.get('account_id')
 
   const [metrics, setMetrics] = useState<TweetMetrics[]>([])
+  const [userStats, setUserStats] = useState<UserStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [maxResults, setMaxResults] = useState('20')
@@ -78,13 +80,23 @@ function AnalyticsContent() {
 
       const params = new URLSearchParams({ max_results: results })
       if (accountId) params.set('x_account_id', accountId)
-      const res = await fetch(`/smart-social/api/analytics?${params.toString()}`)
-      if (!res.ok) {
-        const body = (await res.json()) as { error?: string }
-        throw new Error(body.error ?? `HTTP ${res.status}`)
+
+      const [metricsRes, statsRes] = await Promise.all([
+        fetch(`/smart-social/api/analytics?${params.toString()}`),
+        fetch(`/smart-social/api/x/user-stats${accountId ? `?x_account_id=${accountId}` : ''}`),
+      ])
+
+      if (!metricsRes.ok) {
+        const body = (await metricsRes.json()) as { error?: string }
+        throw new Error(body.error ?? `HTTP ${metricsRes.status}`)
       }
-      const data = (await res.json()) as TweetMetrics[]
+      const data = (await metricsRes.json()) as TweetMetrics[]
       setMetrics(data)
+
+      if (statsRes.ok) {
+        const stats = (await statsRes.json()) as UserStats
+        setUserStats(stats)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'データの取得に失敗しました')
     } finally {
@@ -156,6 +168,44 @@ function AnalyticsContent() {
 
       {!loading && !error && (
         <>
+          {/* フォロワー数カード */}
+          {userStats && (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <Card className="shadow-manavi-sm rounded-[6px] border-manavi-border">
+                <CardHeader className="pb-2 pt-5 px-5">
+                  <CardTitle className="text-xs font-medium text-manavi-navy-light uppercase tracking-wide">フォロワー数</CardTitle>
+                </CardHeader>
+                <CardContent className="px-5 pb-5">
+                  <p className="text-3xl font-semibold tabular-nums text-manavi-navy">{userStats.followers_count.toLocaleString()}</p>
+                </CardContent>
+              </Card>
+              <Card className="shadow-manavi-sm rounded-[6px] border-manavi-border">
+                <CardHeader className="pb-2 pt-5 px-5">
+                  <CardTitle className="text-xs font-medium text-manavi-navy-light uppercase tracking-wide">フォロー中</CardTitle>
+                </CardHeader>
+                <CardContent className="px-5 pb-5">
+                  <p className="text-3xl font-semibold tabular-nums text-manavi-navy">{userStats.following_count.toLocaleString()}</p>
+                </CardContent>
+              </Card>
+              <Card className="shadow-manavi-sm rounded-[6px] border-manavi-border">
+                <CardHeader className="pb-2 pt-5 px-5">
+                  <CardTitle className="text-xs font-medium text-manavi-navy-light uppercase tracking-wide">総ツイート数</CardTitle>
+                </CardHeader>
+                <CardContent className="px-5 pb-5">
+                  <p className="text-3xl font-semibold tabular-nums text-manavi-navy">{userStats.tweet_count.toLocaleString()}</p>
+                </CardContent>
+              </Card>
+              <Card className="shadow-manavi-sm rounded-[6px] border-manavi-border">
+                <CardHeader className="pb-2 pt-5 px-5">
+                  <CardTitle className="text-xs font-medium text-manavi-navy-light uppercase tracking-wide">リスト掲載数</CardTitle>
+                </CardHeader>
+                <CardContent className="px-5 pb-5">
+                  <p className="text-3xl font-semibold tabular-nums text-manavi-navy">{userStats.listed_count.toLocaleString()}</p>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
           {/* サマリーカード */}
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <Card className="shadow-manavi-sm rounded-[6px] border-manavi-border">

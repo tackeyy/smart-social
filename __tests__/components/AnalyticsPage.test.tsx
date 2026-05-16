@@ -21,9 +21,18 @@ function makeSearchParams(params: Record<string, string>) {
 describe('AnalyticsPage', () => {
   beforeEach(() => {
     vi.resetAllMocks()
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => [],
+    // analytics と user-stats の2回のfetchに対応
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if ((url as string).includes('user-stats')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ followers_count: 0, following_count: 0, tweet_count: 0, listed_count: 0 }),
+        })
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => [],
+      })
     })
   })
 
@@ -53,7 +62,7 @@ describe('AnalyticsPage', () => {
 
   it('ローディング中はSkeletonが表示される（aria-busy=true）', () => {
     mockUseSearchParams.mockReturnValue(makeSearchParams({}))
-    global.fetch = vi.fn().mockReturnValue(new Promise(() => {}))
+    global.fetch = vi.fn().mockReturnValue(new Promise(() => {})) // never resolves
 
     render(React.createElement(Suspense, { fallback: null }, React.createElement(AnalyticsPage)))
 
