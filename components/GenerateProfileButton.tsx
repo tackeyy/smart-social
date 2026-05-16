@@ -10,7 +10,12 @@ export function GenerateProfileButton() {
   async function handleClick() {
     setGenerating(true)
     try {
-      const xAccountId = process.env.NEXT_PUBLIC_X_ACCOUNT_ID ?? ''
+      const accountRes = await fetch('/smart-social/api/accounts')
+      if (!accountRes.ok) throw new Error('アカウント情報の取得に失敗しました')
+      const accounts = await accountRes.json()
+      if (!accounts || accounts.length === 0) throw new Error('Xアカウントが見つかりません')
+      const xAccountId = String(accounts[0].id)
+
       const res = await fetch('/smart-social/api/profile/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -34,7 +34,7 @@ export default function AnalyticsPage() {
         setError(null)
 
         // x_account_id は未指定で先頭アカウントを使用
-        const res = await fetch('/api/analytics?max_results=20')
+        const res = await fetch('/smart-social/api/analytics?max_results=20')
         if (!res.ok) {
           const body = (await res.json()) as { error?: string }
           throw new Error(body.error ?? `HTTP ${res.status}`)
