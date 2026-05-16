@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { GenerateProfileButton } from '@/components/GenerateProfileButton'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -32,7 +33,10 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">ダッシュボード</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">ダッシュボード</h1>
+        <GenerateProfileButton />
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
         <Card>

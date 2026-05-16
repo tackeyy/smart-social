@@ -4,6 +4,15 @@ import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import { DraftCard } from '@/components/drafts/DraftCard'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Textarea } from '@/components/ui/textarea'
 import type { Draft, DraftStatus } from '@/types/app'
 
 const STATUS_TABS: { value: DraftStatus | 'all'; label: string }[] = [
@@ -14,10 +23,167 @@ const STATUS_TABS: { value: DraftStatus | 'all'; label: string }[] = [
   { value: 'all', label: 'すべて' },
 ]
 
+interface GenerateFormState {
+  sourceTweetUrl: string
+  sourceTweetText: string
+  instruction: string
+}
+
+function GenerateDraftDialog({
+  open,
+  onOpenChange,
+  onSuccess,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSuccess: () => void
+}) {
+  const [form, setForm] = useState<GenerateFormState>({
+    sourceTweetUrl: '',
+    sourceTweetText: '',
+    instruction: '',
+  })
+  const [generating, setGenerating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  function handleChange(
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) {
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
+    setError(null)
+  }
+
+  async function handleGenerate() {
+    if (!form.sourceTweetUrl.trim()) {
+      setError('リプライ元ツイートURLを入力してください')
+      return
+    }
+    if (!form.sourceTweetText.trim()) {
+      setError('元ツイートの内容を入力してください')
+      return
+    }
+
+    setGenerating(true)
+    setError(null)
+
+    try {
+      const xAccountId = process.env.NEXT_PUBLIC_X_ACCOUNT_ID ?? ''
+      const res = await fetch('/smart-social/api/drafts/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          x_account_id: xAccountId,
+          source_tweet_url: form.sourceTweetUrl.trim(),
+          source_tweet_text: form.sourceTweetText.trim(),
+          ...(form.instruction.trim() && { instruction: form.instruction.trim() }),
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(
+          (data as { error?: string }).error ?? `エラーが発生しました (${res.status})`
+        )
+      }
+
+      toast.success('ドラフトを生成しました')
+      onOpenChange(false)
+      setForm({ sourceTweetUrl: '', sourceTweetText: '', instruction: '' })
+      onSuccess()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'ドラフトの生成に失敗しました')
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  function handleClose() {
+    if (generating) return
+    onOpenChange(false)
+    setForm({ sourceTweetUrl: '', sourceTweetText: '', instruction: '' })
+    setError(null)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent aria-describedby={undefined}>
+        <DialogHeader>
+          <DialogTitle>ドラフトを生成</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 py-2">
+          <div className="space-y-1.5">
+            <label htmlFor="sourceTweetUrl" className="text-sm font-medium">
+              リプライ元ツイートURL <span aria-hidden="true" className="text-red-500">*</span>
+            </label>
+            <input
+              id="sourceTweetUrl"
+              name="sourceTweetUrl"
+              type="url"
+              value={form.sourceTweetUrl}
+              onChange={handleChange}
+              placeholder="https://x.com/..."
+              disabled={generating}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="sourceTweetText" className="text-sm font-medium">
+              元ツイートの内容 <span aria-hidden="true" className="text-red-500">*</span>
+            </label>
+            <Textarea
+              id="sourceTweetText"
+              name="sourceTweetText"
+              value={form.sourceTweetText}
+              onChange={handleChange}
+              placeholder="ツイートの内容を貼り付けてください"
+              disabled={generating}
+              className="min-h-[100px]"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="instruction" className="text-sm font-medium">
+              追加指示（任意）
+            </label>
+            <input
+              id="instruction"
+              name="instruction"
+              type="text"
+              value={form.instruction}
+              onChange={handleChange}
+              placeholder="例: ポジティブなトーンで"
+              disabled={generating}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            />
+          </div>
+
+          {error && (
+            <p role="alert" className="text-sm text-red-500">
+              {error}
+            </p>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={handleClose} disabled={generating}>
+            キャンセル
+          </Button>
+          <Button onClick={handleGenerate} disabled={generating}>
+            {generating ? '生成中...' : '生成する'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 export default function DraftsPage() {
   const [drafts, setDrafts] = useState<Draft[]>([])
   const [activeTab, setActiveTab] = useState<DraftStatus | 'all'>('pending')
   const [loading, setLoading] = useState(true)
+  const [dialogOpen, setDialogOpen] = useState(false)
 
   const fetchDrafts = useCallback(async (status: DraftStatus | 'all') => {
     setLoading(true)
@@ -42,19 +208,22 @@ export default function DraftsPage() {
   }, [activeTab, fetchDrafts])
 
   function handleStatusChange(id: string, newStatus: DraftStatus) {
-    // 楽観的更新: リストからフィルタリング or ステータス更新
     setDrafts((prev) =>
       prev.map((d) => (d.id === id ? { ...d, status: newStatus } : d))
     )
   }
 
-  const displayedDrafts = activeTab === 'all'
-    ? drafts
-    : drafts.filter((d) => d.status === activeTab)
+  const displayedDrafts =
+    activeTab === 'all'
+      ? drafts
+      : drafts.filter((d) => d.status === activeTab)
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">ドラフト一覧</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">ドラフト一覧</h1>
+        <Button onClick={() => setDialogOpen(true)}>ドラフトを生成</Button>
+      </div>
 
       {/* タブ */}
       <div className="flex gap-2 mb-6 flex-wrap" role="tablist" aria-label="ドラフトフィルター">
@@ -104,6 +273,12 @@ export default function DraftsPage() {
           ))}
         </div>
       )}
+
+      <GenerateDraftDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onSuccess={() => fetchDrafts(activeTab)}
+      />
     </div>
   )
 }
