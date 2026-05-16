@@ -8,7 +8,11 @@ export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
 
   // タイミング攻撃対策: timingSafeEqual で定数時間比較
-  const secret = process.env.CRON_SECRET ?? ''
+  const secret = process.env.CRON_SECRET
+  if (!secret) {
+    console.error('[cron/scheduler] CRON_SECRET is not configured')
+    return NextResponse.json({ error: '設定エラー' }, { status: 500 })
+  }
   const incoming = authHeader?.replace('Bearer ', '') ?? ''
   const isValid = incoming.length > 0 &&
     incoming.length === secret.length &&

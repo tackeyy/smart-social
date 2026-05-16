@@ -130,6 +130,18 @@ describe('GET /api/cron/scheduler', () => {
     }
   })
 
+  it('CRON_SECRET が未設定の場合は500を返す', async () => {
+    delete process.env.CRON_SECRET
+    const request = new Request('http://localhost/api/cron/scheduler', {
+      headers: { Authorization: 'Bearer anything' }
+    })
+    await GET(request)
+    expect(mockNextResponseJson).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.any(String) }),
+      { status: 500 }
+    )
+  })
+
   it('scheduled投稿がない場合はprocessed=0を返す', async () => {
     // Arrange
     const mockUpdateQueryBuilder = {
