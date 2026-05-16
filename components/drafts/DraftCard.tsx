@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import type { Draft, DraftStatus } from '@/types/app'
+import { detectExternalLink } from '@/lib/utils/detectExternalLink'
 
 const STATUS_LABEL: Record<DraftStatus, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; description?: string }> = {
   pending:    { label: '承認待ち',        variant: 'secondary' },
@@ -23,12 +24,6 @@ const MAX_CHARS = 280
 interface DraftCardProps {
   draft: Draft
   onStatusChange: (id: string, newStatus: DraftStatus) => void
-}
-
-const EXTERNAL_URL_PATTERN = /https?:\/\/(?!(?:x|twitter)\.com)[^\s]+/i
-
-function hasExternalLink(text: string): boolean {
-  return EXTERNAL_URL_PATTERN.test(text)
 }
 
 export function DraftCard({ draft, onStatusChange }: DraftCardProps) {
@@ -135,7 +130,7 @@ export function DraftCard({ draft, onStatusChange }: DraftCardProps) {
 
       <CardContent className="space-y-3">
         {/* 外部リンク警告バナー */}
-        {!warningDismissed && hasExternalLink(content) && (
+        {!warningDismissed && detectExternalLink(content) && (
           <div
             role="alert"
             className="flex items-start justify-between gap-2 rounded-md border border-yellow-300 bg-yellow-50 px-3 py-2 text-xs text-yellow-800"
