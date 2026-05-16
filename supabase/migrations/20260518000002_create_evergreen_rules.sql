@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS evergreen_rules (
   max_runs         INT CHECK (max_runs > 0),  -- NULL = 無制限
   run_count        INT NOT NULL DEFAULT 0 CHECK (run_count >= 0),
   last_run_at      TIMESTAMPTZ,
+  last_prefix      TEXT,
   next_run_at      TIMESTAMPTZ,
   enabled          BOOLEAN NOT NULL DEFAULT true,
   created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),

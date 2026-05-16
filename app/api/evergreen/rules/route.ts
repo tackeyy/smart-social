@@ -63,6 +63,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'interval_days は7〜365の範囲で指定してください' }, { status: 400 })
   }
 
+  // 重複チェック
+  const { data: existing } = await supabase
+    .from('evergreen_rules')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('source_tweet_id', body.source_tweet_id.trim())
+    .single()
+
+  if (existing) {
+    return NextResponse.json({ error: 'このツイートはすでに登録済みです' }, { status: 409 })
+  }
+
   // next_run_at を interval_days 後に設定
   const nextRunAt = new Date(
     Date.now() + intervalDays * 24 * 60 * 60 * 1000

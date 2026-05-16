@@ -11,6 +11,7 @@ export interface EvergreenRule {
   max_runs: number | null
   run_count: number
   last_run_at: string | null
+  last_prefix: string | null
   next_run_at: string | null
   enabled: boolean
 }
@@ -36,6 +37,7 @@ export function buildEvergreenDraft(
   }
 }
 
+// SupabaseClient 型はバージョン差異・サーバー/クライアント分岐があるため any を許容
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function runEvergreen(supabase: any): Promise<Array<{ rule_id: string; status: string }>> {
   const now = new Date().toISOString()
@@ -67,7 +69,7 @@ export async function runEvergreen(supabase: any): Promise<Array<{ rule_id: stri
 
       const prefix = selectPrefix(
         Array.isArray(rule.prefix_pool) ? rule.prefix_pool : [],
-        null  // 最後に使ったprefixはDB未保存のためnull
+        rule.last_prefix
       )
       const draft = buildEvergreenDraft(rule, prefix)
 
@@ -87,6 +89,7 @@ export async function runEvergreen(supabase: any): Promise<Array<{ rule_id: stri
         .update({
           run_count: rule.run_count + 1,
           last_run_at: now,
+          last_prefix: prefix,
           next_run_at: nextRunAt,
           updated_at: new Date().toISOString(),
         })
