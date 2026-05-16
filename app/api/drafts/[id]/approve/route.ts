@@ -23,27 +23,52 @@ export async function POST(
 
   const accountIds = accounts?.map(a => a.id) ?? []
 
-  const { data: draft, error: fetchError } = await supabase
+  // H-1: アトミックに pending → processing へ遷移（レースコンディション防止）
+  // pending 以外の行は更新されないため、複数リクエストが同時に来ても1つだけが処理される
+  const { data: claimed, error: claimError } = await supabase
     .from('reply_drafts')
-    .select('*')
+    .update({ status: 'processing' })
     .eq('id', id)
-    .in('x_account_id', accountIds)  // 所有権確認
+    .eq('status', 'pending')
+    .in('x_account_id', accountIds)
+    .select()
     .single()
 
-  if (fetchError?.code === 'PGRST116' || !draft) {
-    return NextResponse.json({ error: 'Not Found' }, { status: 404 })
+  if (claimError?.code === 'PGRST116' || !claimed) {
+    // pending でない（posted / processing / rejected）か、存在しないか、権限なし
+    // どの状態かを確認するため、現状を取得する
+    const { data: existing, error: fetchError } = await supabase
+      .from('reply_drafts')
+      .select('id, status')
+      .eq('id', id)
+      .in('x_account_id', accountIds)
+      .single()
+
+    if (fetchError?.code === 'PGRST116' || !existing) {
+      return NextResponse.json({ error: 'Not Found' }, { status: 404 })
+    }
+
+    if (fetchError) {
+      // M-1: fetchError.message を外部に露出しない
+      console.error('DB fetch error:', { draftId: id, error: fetchError })
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    }
+
+    if (existing.status === 'posted') {
+      return NextResponse.json({ error: 'Already posted' }, { status: 409 })
+    }
+
+    // processing / rejected など
+    return NextResponse.json({ error: 'Already processing or not in pending state' }, { status: 409 })
   }
 
-  if (fetchError) {
-    return NextResponse.json({ error: fetchError.message }, { status: 500 })
-  }
-
-  if (draft.status === 'posted') {
-    return NextResponse.json({ error: 'Already posted' }, { status: 409 })
+  if (claimError) {
+    console.error('DB claim error:', { draftId: id, error: claimError })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 
   try {
-    const tweet = await postTweet({ text: draft.content })
+    const tweet = await postTweet({ text: claimed.content })
 
     const { data: updated, error: updateError } = await supabase
       .from('reply_drafts')
@@ -60,13 +85,19 @@ export async function POST(
         error: updateError,
       })
       return NextResponse.json(
-        { ...draft, status: 'posted', posted_tweet_id: tweet.id, warning: 'DB sync failed' },
+        { ...claimed, status: 'posted', posted_tweet_id: tweet.id, warning: 'DB sync failed' },
         { status: 200 }
       )
     }
 
-    return NextResponse.json(updated ?? { ...draft, status: 'posted', posted_tweet_id: tweet.id })
+    return NextResponse.json(updated ?? { ...claimed, status: 'posted', posted_tweet_id: tweet.id })
   } catch (err) {
+    // X API 失敗: processing → pending に戻してリトライ可能にする
+    await supabase
+      .from('reply_drafts')
+      .update({ status: 'pending' })
+      .eq('id', id)
+
     const message = err instanceof Error ? err.message : 'Failed to post tweet'
     return NextResponse.json({ error: message }, { status: 422 })
   }

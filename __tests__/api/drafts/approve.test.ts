@@ -109,22 +109,32 @@ describe('POST /api/drafts/[id]/approve', () => {
   })
 
   it('既にpostedのドラフトは409を返す', async () => {
-    // Arrange: x_accounts から account を返し、reply_drafts からpostedドラフトを返す
+    // Arrange: アトミック遷移の新フロー
+    // 1回目のupdate (pending→processing): PGRST116で0件（すでにposted）
+    // 2回目のselect (現状確認): posted を返す
     const postedDraft = {
       id: 'draft-1',
-      content: 'Hello',
       status: 'posted',
       posted_tweet_id: 'tweet-123',
     }
-    const mockQueryBuilder = {
-      update: vi.fn().mockReturnThis(),
+    // claim用: update().eq().eq().in().select().single() → PGRST116 (0行更新)
+    const mockClaimBuilder = {
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: null,
+        error: { code: 'PGRST116', message: 'Row not found' },
+      }),
+    }
+    // fetch用: select().eq().in().single() → posted ドラフトを返す
+    const mockFetchBuilder = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       in: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({ data: postedDraft, error: null }),
     }
-    // x_accounts の from 呼び出しは accounts を返す
-    let fromCallCount = 0
+    let updateCallCount = 0
     mockCreateClient.mockResolvedValue({
       auth: {
         getUser: vi.fn().mockResolvedValue({
@@ -139,7 +149,12 @@ describe('POST /api/drafts/[id]/approve', () => {
             eq: vi.fn().mockResolvedValue({ data: [{ id: 'account-1' }], error: null }),
           }
         }
-        return mockQueryBuilder
+        // reply_drafts: 最初はupdate (claim), 次はselect (fetch)
+        updateCallCount++
+        if (updateCallCount === 1) {
+          return { update: vi.fn().mockReturnValue(mockClaimBuilder) }
+        }
+        return mockFetchBuilder
       }),
     } as any)
 

@@ -23,15 +23,6 @@ import { NextResponse } from 'next/server'
 const mockCreateClient = vi.mocked(createClient)
 const mockNextResponseJson = vi.mocked(NextResponse.json)
 
-/**
- * 現在の実装 (app/api/drafts/route.ts) は認証チェックとstatusフィルタを持たない。
- * これらのテストは TDD の Red フェーズとして、実装が完了するまで失敗し続ける。
- *
- * 期待する実装フロー:
- * 1. auth.getUser() でユーザー認証チェック → 未認証は401
- * 2. クエリパラメータ ?status= があれば .eq('status', value) でフィルタ
- * 3. ドラフト一覧を返す
- */
 describe('GET /api/drafts', () => {
   beforeEach(() => {
     vi.resetAllMocks()
@@ -45,26 +36,47 @@ describe('GET /api/drafts', () => {
       },
       from: vi.fn().mockReturnValue({
         select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: [], error: null }),
       }),
     } as any)
 
-    // Act
-    await GET()
+    const request = new Request('http://localhost/api/drafts')
 
-    // Assert: 認証チェックがない現実装では401が返らないのでFailする（Red）
+    // Act
+    await GET(request)
+
+    // Assert
     expect(mockNextResponseJson).toHaveBeenCalledWith(
       { error: 'Unauthorized' },
       { status: 401 }
     )
   })
 
-  it('認証済みの場合はドラフト一覧を返す', async () => {
+  it('認証済みの場合はreply_drafts一覧を返す', async () => {
     // Arrange
     const mockDrafts = [
-      { id: 'draft-1', content: 'Hello', status: 'pending', created_at: '2024-01-01' },
-      { id: 'draft-2', content: 'World', status: 'posted', created_at: '2024-01-02' },
+      { id: 'draft-1', source_tweet_id: 'tweet-1', x_account_id: 1, created_at: '2024-01-01' },
+      { id: 'draft-2', source_tweet_id: 'tweet-2', x_account_id: 1, created_at: '2024-01-02' },
     ]
+    const mockAccounts = [{ id: 1 }]
+
+    const mockFrom = vi.fn().mockImplementation((table: string) => {
+      if (table === 'x_accounts') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockResolvedValue({ data: mockAccounts, error: null }),
+        }
+      }
+      // reply_drafts
+      return {
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({ data: mockDrafts, error: null }),
+      }
+    })
+
     mockCreateClient.mockResolvedValue({
       auth: {
         getUser: vi.fn().mockResolvedValue({
@@ -72,29 +84,41 @@ describe('GET /api/drafts', () => {
           error: null,
         }),
       },
-      from: vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({ data: mockDrafts, error: null }),
-      }),
+      from: mockFrom,
     } as any)
 
+    const request = new Request('http://localhost/api/drafts')
+
     // Act
-    await GET()
+    await GET(request)
 
     // Assert
     expect(mockNextResponseJson).toHaveBeenCalledWith(mockDrafts)
   })
 
-  it('?status=pendingで絞り込まれたドラフトを返す', async () => {
+  it('?status=pendingで絞り込まれたreply_draftsを返す', async () => {
     // Arrange
     const pendingDrafts = [
-      { id: 'draft-1', content: 'Hello', status: 'pending', created_at: '2024-01-01' },
+      { id: 'draft-1', source_tweet_id: 'tweet-1', x_account_id: 1, created_at: '2024-01-01' },
     ]
-    const mockQueryBuilder = {
+    const mockAccounts = [{ id: 1 }]
+    const mockReplyDraftsQueryBuilder = {
       select: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       order: vi.fn().mockResolvedValue({ data: pendingDrafts, error: null }),
     }
+
+    const mockFrom = vi.fn().mockImplementation((table: string) => {
+      if (table === 'x_accounts') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockResolvedValue({ data: mockAccounts, error: null }),
+        }
+      }
+      return mockReplyDraftsQueryBuilder
+    })
+
     mockCreateClient.mockResolvedValue({
       auth: {
         getUser: vi.fn().mockResolvedValue({
@@ -102,7 +126,7 @@ describe('GET /api/drafts', () => {
           error: null,
         }),
       },
-      from: vi.fn().mockReturnValue(mockQueryBuilder),
+      from: mockFrom,
     } as any)
 
     const request = new Request('http://localhost/api/drafts?status=pending')
@@ -110,8 +134,8 @@ describe('GET /api/drafts', () => {
     // Act
     await GET(request)
 
-    // Assert: statusフィルタがない現実装では eq が呼ばれないのでFailする（Red）
-    expect(mockQueryBuilder.eq).toHaveBeenCalledWith('status', 'pending')
+    // Assert
+    expect(mockReplyDraftsQueryBuilder.eq).toHaveBeenCalledWith('status', 'pending')
     expect(mockNextResponseJson).toHaveBeenCalledWith(pendingDrafts)
   })
 })

@@ -40,7 +40,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 
-  const results: Array<{ id: string; status: string; error?: string }> = []
+  const results: Array<{ id: string; status: string }> = []
 
   for (const post of posts ?? []) {
     const text = post.drafts?.content ?? ''
@@ -77,7 +77,7 @@ export async function GET(request: Request) {
         .from('scheduled_posts')
         .update({ retry_count: newCount, last_error: message, status: newStatus })
         .eq('id', post.id)
-      results.push({ id: post.id, status: newStatus, error: message })
+      results.push({ id: post.id, status: newStatus })
     }
   }
 

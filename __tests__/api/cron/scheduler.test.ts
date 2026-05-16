@@ -66,24 +66,35 @@ describe('GET /api/cron/scheduler', () => {
   })
 
   it('pending投稿がある場合はX API呼び出し後にstatus=postedで返す', async () => {
-    // Arrange
+    // Arrange: アトミック update → select パターン
     const mockPosts = [
-      { id: 'post-1', status: 'pending', drafts: { content: 'Hello' } },
-      { id: 'post-2', status: 'pending', drafts: { content: 'World' } },
+      { id: 'post-1', status: 'processing', retry_count: 0, drafts: { content: 'Hello' } },
+      { id: 'post-2', status: 'processing', retry_count: 0, drafts: { content: 'World' } },
     ]
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
       json: async () => ({ data: { id: 'tweet-1', text: 'Hello' } }),
     })
-    const mockQueryBuilder = {
-      select: vi.fn().mockReturnThis(),
+
+    // update().eq().lte().lt().select() チェーンで処理対象を返す
+    const mockUpdateQueryBuilder = {
       eq: vi.fn().mockReturnThis(),
-      lte: vi.fn().mockResolvedValue({ data: mockPosts, error: null }),
-      update: vi.fn().mockReturnThis(),
+      lte: vi.fn().mockReturnThis(),
+      lt: vi.fn().mockReturnThis(),
+      select: vi.fn().mockResolvedValue({ data: mockPosts, error: null }),
     }
+    // 成功時の posted 更新用
+    const mockUpdatePostedQueryBuilder = {
+      eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+    }
+
     mockCreateClient.mockReturnValue({
-      from: vi.fn().mockReturnValue(mockQueryBuilder),
+      from: vi.fn().mockReturnValue({
+        update: vi.fn()
+          .mockReturnValueOnce(mockUpdateQueryBuilder)   // 1回目: processing更新
+          .mockReturnValue(mockUpdatePostedQueryBuilder), // 2回目以降: posted更新
+      }),
     } as any)
 
     const request = new Request('http://localhost/api/cron/scheduler', {
@@ -107,13 +118,16 @@ describe('GET /api/cron/scheduler', () => {
 
   it('pending投稿がない場合はprocessed=0を返す', async () => {
     // Arrange
-    const mockSupabaseSelect = {
-      select: vi.fn().mockReturnThis(),
+    const mockUpdateQueryBuilder = {
       eq: vi.fn().mockReturnThis(),
-      lte: vi.fn().mockResolvedValue({ data: [], error: null }),
+      lte: vi.fn().mockReturnThis(),
+      lt: vi.fn().mockReturnThis(),
+      select: vi.fn().mockResolvedValue({ data: [], error: null }),
     }
     mockCreateClient.mockReturnValue({
-      from: vi.fn().mockReturnValue(mockSupabaseSelect),
+      from: vi.fn().mockReturnValue({
+        update: vi.fn().mockReturnValue(mockUpdateQueryBuilder),
+      }),
     } as any)
 
     const request = new Request('http://localhost/api/cron/scheduler', {
