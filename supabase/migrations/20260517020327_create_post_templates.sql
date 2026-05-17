@@ -1,6 +1,6 @@
 CREATE TABLE post_templates (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  account_id UUID REFERENCES x_accounts(id) ON DELETE CASCADE,
+  account_id BIGINT REFERENCES x_accounts(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   channel TEXT NOT NULL CHECK (channel IN ('post', 'reply', 'dm')),
   body TEXT NOT NULL,
