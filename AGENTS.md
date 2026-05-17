@@ -8,7 +8,20 @@ Heed deprecation notices.
 
 ## デプロイ手順
 
-本番デプロイは `scripts/deploy.sh` を使う。マイグレーションの自動適用とVercelデプロイを一括実行する。
+### 通常デプロイ（推奨）: git push
+
+`main` ブランチへの push が Vercel GitHub Integration で本番自動デプロイされる。
+
+```bash
+git push origin main
+```
+
+- マイグレーションが**ない**変更はこれだけでよい
+- Vercel ダッシュボードでビルド状況を確認: https://vercel.com/yusuke-takitas-projects/smart-social
+
+### バックアップ / マイグレーション付きデプロイ: `scripts/deploy.sh`
+
+DBマイグレーションを伴う変更、またはGitHub Integration が使えない場合に使う。
 
 ```bash
 # 事前: Supabaseアクセストークンをシェル環境変数にセット（~/.zshrc に export 推奨）
@@ -22,6 +35,12 @@ bash scripts/deploy.sh prod
 - 未コミット変更がある場合もデプロイを中止する
 - マイグレーションは Management API 経由で適用（DBパスワード不要）
 - 適用済みのマイグレーションは自動スキップ
+
+### GitHub Integration の設定（初回のみ・ブラウザ必要）
+
+未設定の場合は以下で接続する:
+1. https://vercel.com/yusuke-takitas-projects/smart-social/settings/git を開く
+2. "Connect Git Repository" → `tackeyy/smart-social` を選択
 
 ## 公開URLとルーティング確認
 
