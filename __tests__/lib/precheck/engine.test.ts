@@ -15,6 +15,8 @@ vi.mock('@/lib/ai/models', () => ({
   PRECHECK_MODEL: 'mock-precheck-model',
 }))
 
+const mockUsage = { inputTokens: 80, outputTokens: 120, totalTokens: 200 }
+
 describe('check280CharLimit', () => {
   it('280文字以内の場合はnullを返す', () => {
     const result = check280CharLimit('a'.repeat(280))
@@ -34,27 +36,25 @@ describe('runPrecheck', () => {
     mockGenerateText.mockReset()
   })
 
-  it('280文字超のテキストはClaude APIを呼ばずにblockedを返す', async () => {
-    const result = await runPrecheck('a'.repeat(281), 'post')
+  it('280文字超のテキストはClaude APIを呼ばずにblockedを返し usage は null', async () => {
+    const { result, usage } = await runPrecheck('a'.repeat(281), 'post')
     expect(result.decision).toBe('blocked')
     expect(result.score).toBe(0)
+    expect(usage).toBeNull()
     expect(mockGenerateText).not.toHaveBeenCalled()
   })
 
   it('Claude APIがauto_passを返した場合はauto_passになる', async () => {
     mockGenerateText.mockResolvedValueOnce({
-      text: JSON.stringify({
-        decision: 'auto_pass',
-        score: 95,
-        reasons: [],
-        suggestions: [],
-      }),
+      text: JSON.stringify({ decision: 'auto_pass', score: 95, reasons: [], suggestions: [] }),
+      usage: mockUsage,
     })
 
-    const result = await runPrecheck('今日は良い天気ですね！頑張りましょう。', 'post')
+    const { result, usage } = await runPrecheck('今日は良い天気ですね！頑張りましょう。', 'post')
     expect(result.decision).toBe('auto_pass')
     expect(result.score).toBe(95)
     expect(result.reasons).toHaveLength(0)
+    expect(usage).toEqual({ input_tokens: 80, output_tokens: 120 })
   })
 
   it('Claude APIがblockedを返した場合はblockedになる', async () => {
@@ -65,9 +65,10 @@ describe('runPrecheck', () => {
         reasons: ['断定的税務助言が含まれています'],
         suggestions: ['「〜できます」を「〜の可能性があります」に変更してください'],
       }),
+      usage: mockUsage,
     })
 
-    const result = await runPrecheck('この節税方法で絶対に税金が下がります！', 'post')
+    const { result } = await runPrecheck('この節税方法で絶対に税金が下がります！', 'post')
     expect(result.decision).toBe('blocked')
     expect(result.reasons).toContain('断定的税務助言が含まれています')
   })
@@ -80,9 +81,10 @@ describe('runPrecheck', () => {
         reasons: ['根拠が不明確な記述があります'],
         suggestions: ['出典を明記することを検討してください'],
       }),
+      usage: mockUsage,
     })
 
-    const result = await runPrecheck('最近の調査によると節税効果が高いらしいです', 'post')
+    const { result } = await runPrecheck('最近の調査によると節税効果が高いらしいです', 'post')
     expect(result.decision).toBe('manual_review')
     expect(result.score).toBe(60)
   })
@@ -90,9 +92,10 @@ describe('runPrecheck', () => {
   it('scoreは0〜100の範囲内', async () => {
     mockGenerateText.mockResolvedValueOnce({
       text: JSON.stringify({ decision: 'auto_pass', score: 85, reasons: [], suggestions: [] }),
+      usage: mockUsage,
     })
 
-    const result = await runPrecheck('普通のツイートです', 'post')
+    const { result } = await runPrecheck('普通のツイートです', 'post')
     expect(result.score).toBeGreaterThanOrEqual(0)
     expect(result.score).toBeLessThanOrEqual(100)
   })
@@ -100,9 +103,10 @@ describe('runPrecheck', () => {
   it('Claude APIが不正なJSONを返した場合はmanual_reviewにフォールバック', async () => {
     mockGenerateText.mockResolvedValueOnce({
       text: '不正なJSON',
+      usage: mockUsage,
     })
 
-    const result = await runPrecheck('何かテキスト', 'post')
+    const { result } = await runPrecheck('何かテキスト', 'post')
     expect(result.decision).toBe('manual_review')
   })
 })

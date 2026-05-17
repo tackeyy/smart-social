@@ -1,5 +1,6 @@
 import { generateText } from 'ai'
 import { PRECHECK_MODEL } from '@/lib/ai/models'
+import type { ClaudeUsage } from '@/lib/ai/client'
 
 export type PrecheckDecision = 'auto_pass' | 'manual_review' | 'blocked'
 export type TemplateChannel = 'post' | 'reply' | 'dm'
@@ -59,19 +60,22 @@ const SYSTEM_PROMPT = `あなたはX（Twitter）投稿品質チェックの専�
 export async function runPrecheck(
   text: string,
   channel: TemplateChannel
-): Promise<PrecheckResult> {
+): Promise<{ result: PrecheckResult; usage: ClaudeUsage | null }> {
   const charLimitRule = check280CharLimit(text)
   if (charLimitRule) {
     return {
-      decision: 'blocked',
-      score: 0,
-      reasons: [charLimitRule.message],
-      suggestions: [`${text.length - MAX_CHARS}文字削減してください`],
+      result: {
+        decision: 'blocked',
+        score: 0,
+        reasons: [charLimitRule.message],
+        suggestions: [`${text.length - MAX_CHARS}文字削減してください`],
+      },
+      usage: null,
     }
   }
 
   try {
-    const { text: rawText } = await generateText({
+    const { text: rawText, usage } = await generateText({
       model: PRECHECK_MODEL,
       system: SYSTEM_PROMPT,
       prompt: `以下の${channel}投稿を審査してください:\n\n${text}`,
@@ -85,17 +89,23 @@ export async function runPrecheck(
     const score = Math.max(0, Math.min(100, Number(parsed.score) || 50))
 
     return {
-      decision: parsed.decision ?? 'manual_review',
-      score,
-      reasons: Array.isArray(parsed.reasons) ? parsed.reasons : [],
-      suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
+      result: {
+        decision: parsed.decision ?? 'manual_review',
+        score,
+        reasons: Array.isArray(parsed.reasons) ? parsed.reasons : [],
+        suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
+      },
+      usage: { input_tokens: usage.inputTokens ?? 0, output_tokens: usage.outputTokens ?? 0 },
     }
   } catch {
     return {
-      decision: 'manual_review',
-      score: 50,
-      reasons: ['自動チェックを完了できませんでした。内容を確認してください。'],
-      suggestions: [],
+      result: {
+        decision: 'manual_review',
+        score: 50,
+        reasons: ['自動チェックを完了できませんでした。内容を確認してください。'],
+        suggestions: [],
+      },
+      usage: null,
     }
   }
 }
