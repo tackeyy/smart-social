@@ -6,15 +6,14 @@ import type { Plan, BillingInterval } from '@/types/subscription'
 const VALID_PAID_PLANS = ['pro', 'business'] as const
 type PaidPlan = typeof VALID_PAID_PLANS[number]
 
-const PRICE_IDS: Record<PaidPlan, Record<BillingInterval, string>> = {
-  pro: {
-    monthly: process.env.STRIPE_PRO_MONTHLY_PRICE_ID ?? '',
-    yearly: process.env.STRIPE_PRO_YEARLY_PRICE_ID ?? '',
-  },
-  business: {
-    monthly: process.env.STRIPE_BUSINESS_MONTHLY_PRICE_ID ?? '',
-    yearly: process.env.STRIPE_BUSINESS_YEARLY_PRICE_ID ?? '',
-  },
+function getPriceId(plan: PaidPlan, interval: BillingInterval): string {
+  const envMap = {
+    pro: { monthly: process.env.STRIPE_PRO_MONTHLY_PRICE_ID, yearly: process.env.STRIPE_PRO_YEARLY_PRICE_ID },
+    business: { monthly: process.env.STRIPE_BUSINESS_MONTHLY_PRICE_ID, yearly: process.env.STRIPE_BUSINESS_YEARLY_PRICE_ID },
+  }
+  const id = envMap[plan][interval]
+  if (!id) throw new Error(`Price ID not configured: ${plan}/${interval}`)
+  return id
 }
 
 function isPaidPlan(plan: unknown): plan is PaidPlan {
@@ -64,8 +63,8 @@ export async function POST(request: Request) {
         .maybeSingle()
 
       stripeCustomerId = subscription?.stripe_customer_id ?? null
-    } catch {
-      // DBアクセス失敗時はcustomerなしで続行
+    } catch (err) {
+      console.warn('[Checkout] Failed to fetch existing customer ID from DB, continuing without it:', err)
     }
 
     if (!stripeCustomerId) {
@@ -75,12 +74,12 @@ export async function POST(request: Request) {
           metadata: { user_id: user.id },
         })
         stripeCustomerId = customer.id
-      } catch {
-        // customers.create失敗時はcustomerなしで続行
+      } catch (err) {
+        console.warn('[Checkout] Failed to create Stripe customer, continuing without customer ID:', err)
       }
     }
 
-    const priceId = PRICE_IDS[plan][billingInterval]
+    const priceId = getPriceId(plan, billingInterval)
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 
     const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {

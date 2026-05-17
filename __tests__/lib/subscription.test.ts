@@ -130,6 +130,6 @@ describe('getMonthlyAiLimit', () => {
 
   it('異常系: 不正なプラン名を渡した場合はエラーをスローする', () => {
     // Arrange & Act & Assert
-    expect(() => getMonthlyAiLimit('unknown')).toThrow()
+    expect(() => getMonthlyAiLimit('unknown' as 'free' | 'pro' | 'business')).toThrow()
   })
 })

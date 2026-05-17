@@ -62,9 +62,6 @@ export function canUseFeature(plan: Plan, feature: string): boolean {
   return features.has(feature as Feature)
 }
 
-export function getMonthlyAiLimit(plan: string): number {
-  if (!(plan in PLAN_LIMITS)) {
-    throw new Error(`Unknown plan: ${plan}`)
-  }
-  return PLAN_LIMITS[plan as Plan].aiGenerationsPerMonth
+export function getMonthlyAiLimit(plan: Plan): number {
+  return getPlanLimits(plan).aiGenerationsPerMonth
 }

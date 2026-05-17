@@ -52,6 +52,11 @@ const mockStripeCheckoutCreate = vi.mocked(stripe.checkout.sessions.create)
 describe('POST /api/stripe/checkout', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    // Price ID 環境変数のデフォルト設定
+    process.env.STRIPE_PRO_MONTHLY_PRICE_ID = 'price_pro_monthly_test'
+    process.env.STRIPE_PRO_YEARLY_PRICE_ID = 'price_pro_yearly_test'
+    process.env.STRIPE_BUSINESS_MONTHLY_PRICE_ID = 'price_business_monthly_test'
+    process.env.STRIPE_BUSINESS_YEARLY_PRICE_ID = 'price_business_yearly_test'
   })
 
   it('未認証の場合は401を返す', async () => {

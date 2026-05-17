@@ -139,6 +139,12 @@ describe('POST /api/stripe/webhooks', () => {
     const { supabaseMock, mockUpsert } = buildSupabaseMock()
     mockCreateClient.mockReturnValue(supabaseMock)
 
+    const fakeSubscription = {
+      status: 'active',
+      items: { data: [] },
+    }
+    mockSubscriptionsRetrieve.mockResolvedValue(fakeSubscription as any)
+
     const event = {
       type: 'checkout.session.completed',
       data: {
@@ -157,6 +163,7 @@ describe('POST /api/stripe/webhooks', () => {
     await POST(request)
 
     // Assert
+    expect(mockSubscriptionsRetrieve).toHaveBeenCalledWith('sub_test_123')
     expect(mockUpsert).toHaveBeenCalledOnce()
     expect(mockUpsert).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -191,7 +198,11 @@ describe('POST /api/stripe/webhooks', () => {
       data: {
         object: {
           customer: 'cus_test_123',
-          subscription: 'sub_test_123',
+          parent: {
+            subscription_details: {
+              subscription: 'sub_test_123',
+            },
+          },
         },
       },
     }
