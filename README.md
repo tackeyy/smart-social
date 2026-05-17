@@ -1,31 +1,39 @@
 # smart-social
 
-> X（Twitter）運用を自動化する AI 駆動の投稿管理ツール。ドラフト管理・スケジュール投稿を一元化し、Vercel Cron で定時自動投稿を実現します。
+> X（Twitter）運用を AI で自動化する投稿管理 SaaS。文体プロファイル生成・ドラフト管理・スケジュール投稿・オートプラグ・エバーグリーン投稿を一元管理します。
 
-URL: `gyomu.ai/smart-social/`
+ポジション：**日本の Tweet Hunter**（日本語 × AI 高品質生成 × X 特化）
 
-## 主要機能（Phase 1）
+## 主要機能
 
 | 機能 | 概要 |
 |------|------|
-| **ドラフト管理** | AI 生成または手動作成した投稿下書きを承認ワークフロー（承認待ち / 承認済み / 却下 / 投稿済み）で管理 |
+| **文体プロファイル** | ツイート履歴から AI が文体を分析・プロファイル生成。手動編集も可能 |
+| **ドラフト管理** | AI 生成または手動作成の下書きを承認ワークフロー（承認待ち / 承認済み / 却下 / 投稿済み）で管理 |
+| **AI リプライ生成** | 引用元ツイートに対し文体プロファイルに合わせたリプライ候補を 3 案生成 |
 | **スケジュール投稿** | 承認済みドラフトに投稿日時を設定し、Vercel Cron（毎分実行）が自動投稿 |
-| **リトライ制御** | X API 投稿失敗時に最大 3 回リトライ。失敗理由を `last_error` に記録 |
-| **認証** | Supabase Auth によるメール / パスワード認証。ダッシュボードは認証必須 |
+| **オートプラグ** | 条件を満たしたツイートに自動リプライ（リプライ宣伝）するルール設定 |
+| **エバーグリーン投稿** | 繰り返し投稿コンテンツをスケジュール管理 |
+| **コンテンツカレンダー** | 投稿計画をカレンダービューで管理 |
+| **投稿テンプレート** | よく使う投稿文のテンプレートライブラリ |
+| **チーム機能** | 複数メンバーでの共同運用・権限管理 |
+| **AI 品質チェック（Precheck）** | 投稿前に断定的表現・コンプライアンス違反を自動検出 |
+| **AI 使用量トラッキング** | AI 呼び出しごとのトークン数・コストを記録 |
+| **Stripe 課金** | Free / Pro / Business のサブスクリプション管理 |
 
 ## 技術スタック
 
 | 区分 | 採用技術 |
 |------|----------|
 | フレームワーク | Next.js 16 (App Router) |
-| 言語 | TypeScript 5 |
+| 言語 | TypeScript 6 |
 | スタイリング | Tailwind CSS 4 |
 | UI コンポーネント | Radix UI + shadcn/ui |
 | バックエンド | Supabase (PostgreSQL + Auth + RLS) |
-| AI | Anthropic Claude SDK (`@anthropic-ai/sdk`) |
+| AI | Vercel AI SDK (`ai` + `@ai-sdk/anthropic`) |
+| 課金 | Stripe |
 | テスト | Vitest + Testing Library |
 | デプロイ | Vercel |
-| DNS | Cloudflare |
 
 ## ローカル開発セットアップ
 
@@ -44,11 +52,11 @@ npm install
 
 ### 2. 環境変数の設定
 
-`.env.local` を作成し、以下を設定します。
-
 ```bash
-cp .env.local.example .env.local  # example が存在する場合
+cp .env.example .env.local
 ```
+
+`.env.local` に以下を設定します（Stripe は課金機能を使う場合のみ）。
 
 ```env
 # Supabase
@@ -61,16 +69,30 @@ X_API_KEY=<api-key>
 X_API_SECRET=<api-secret>
 X_ACCESS_TOKEN=<access-token>
 X_ACCESS_TOKEN_SECRET=<access-token-secret>
+X_BEARER_TOKEN=<bearer-token>
+X_CALLBACK_URL=http://localhost:3000/api/auth/x/callback
+
+# AI
+ANTHROPIC_API_KEY=<anthropic-api-key>
 
 # Vercel Cron 認証
 CRON_SECRET=<任意の長いランダム文字列>
+
+# Stripe（課金機能）
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+STRIPE_PRO_MONTHLY_PRICE_ID=price_...
+STRIPE_PRO_YEARLY_PRICE_ID=price_...
+STRIPE_BUSINESS_MONTHLY_PRICE_ID=price_...
+STRIPE_BUSINESS_YEARLY_PRICE_ID=price_...
 ```
 
 ### 3. Supabase ローカル起動とマイグレーション
 
 ```bash
 supabase start
-supabase db reset   # migrations/ 配下のSQLを全て適用
+supabase db reset   # migrations/ 配下の SQL を全て適用
 ```
 
 ### 4. 開発サーバー起動
@@ -79,56 +101,15 @@ supabase db reset   # migrations/ 配下のSQLを全て適用
 npm run dev
 ```
 
-`http://localhost:3000/smart-social` にアクセスしてください。
+`http://localhost:3000` にアクセスしてください。
 
 ### 5. テスト実行
 
 ```bash
 npm test           # ワンショット実行
 npm run test:watch # ウォッチモード
+npm run typecheck  # 型チェック
 ```
-
-## Supabase セットアップ（本番）
-
-### Supabase プロジェクト作成
-
-1. [supabase.com](https://supabase.com) でプロジェクトを作成
-2. 「Project Settings > API」から URL・Anon Key・Service Role Key を取得
-
-### マイグレーション適用
-
-```bash
-supabase link --project-ref <project-ref>
-supabase db push
-```
-
-適用されるマイグレーション（`supabase/migrations/` 配下）:
-
-| ファイル | 内容 |
-|---------|------|
-| `20260516000001_initial_schema.sql` | テーブル定義・ENUM・トリガー（`x_accounts` / `drafts` / `scheduled_posts` / `reply_drafts`） |
-| `20260516000002_rls_policies.sql` | Row Level Security ポリシーとヘルパー関数 |
-| `20260516000003_indexes.sql` | クエリ最適化インデックス |
-| `20260516000004_add_processing_status.sql` | `scheduled_posts.status` に `processing` 追加（二重投稿防止） |
-| `20260516000005_add_reply_draft_processing_status.sql` | `reply_drafts` への処理状態カラム追加 |
-
-## デプロイ手順
-
-### Vercel デプロイ
-
-1. [vercel.com](https://vercel.com) でプロジェクトをインポート（GitHub リポジトリを選択）
-2. 「Environment Variables」に [環境変数一覧](#環境変数一覧) の全変数を設定
-3. 「Deploy」を実行
-
-Vercel Cron（`vercel.json` に定義）が毎分 `/smart-social/api/cron/scheduler` を叩き、スケジュール済み投稿を自動実行します。
-
-### Cloudflare DNS 設定
-
-`gyomu.ai` のサブパスにルーティングする場合は、Cloudflare の DNS / Page Rules で Vercel のデプロイ URL を指すよう設定してください。
-
-1. Cloudflare ダッシュボード > DNS
-2. `gyomu.ai` のAレコードまたはCNAMEを Vercel の割り当てドメインへ向ける
-3. SSL/TLS モードを「Full (strict)」に設定
 
 ## 環境変数一覧
 
@@ -141,7 +122,42 @@ Vercel Cron（`vercel.json` に定義）が毎分 `/smart-social/api/cron/schedu
 | `X_API_SECRET` | ✅ | X Developer App の API Secret |
 | `X_ACCESS_TOKEN` | ✅ | X アカウントの Access Token |
 | `X_ACCESS_TOKEN_SECRET` | ✅ | X アカウントの Access Token Secret |
+| `X_BEARER_TOKEN` | ✅ | X API v2 の Bearer Token（タイムライン取得等） |
+| `X_CALLBACK_URL` | ✅ | X OAuth コールバック URL |
+| `ANTHROPIC_API_KEY` | ✅ | Anthropic API Key（Vercel AI SDK 経由で利用） |
 | `CRON_SECRET` | ✅ | Vercel Cron エンドポイントの認証シークレット |
+| `NEXT_PUBLIC_SITE_URL` | ✅ | 本番サイト URL（`https://gyomu.ai` 等） |
+| `STRIPE_SECRET_KEY` | 課金時 | Stripe Secret Key |
+| `STRIPE_WEBHOOK_SECRET` | 課金時 | Stripe Webhook 署名シークレット |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | 課金時 | Stripe Publishable Key |
+| `STRIPE_PRO_MONTHLY_PRICE_ID` | 課金時 | Pro プラン月額の Price ID |
+| `STRIPE_PRO_YEARLY_PRICE_ID` | 課金時 | Pro プラン年額の Price ID |
+| `STRIPE_BUSINESS_MONTHLY_PRICE_ID` | 課金時 | Business プラン月額の Price ID |
+| `STRIPE_BUSINESS_YEARLY_PRICE_ID` | 課金時 | Business プラン年額の Price ID |
+
+## マイグレーション一覧
+
+`supabase/migrations/` 配下：
+
+| ファイル | 内容 |
+|---------|------|
+| `20260516000001_initial_schema.sql` | 基本テーブル定義（`x_accounts` / `drafts` / `scheduled_posts` / `reply_drafts`） |
+| `20260516000002_rls_policies.sql` | Row Level Security ポリシー |
+| `20260516000003_indexes.sql` | クエリ最適化インデックス |
+| `20260516000004_add_processing_status.sql` | `scheduled_posts` に `processing` ステータス追加（二重投稿防止） |
+| `20260516000005_add_reply_draft_processing_status.sql` | `reply_drafts` 処理状態カラム追加 |
+| `20260516000006_style_profiles_rls.sql` | `style_profiles` の RLS ポリシー |
+| `20260516000007_add_posted_tweet_id.sql` | 投稿済みツイート ID カラム追加 |
+| `20260517000008_create_style_profiles.sql` | 文体プロファイルテーブル |
+| `20260517000009_add_style_profiles_unique_constraint.sql` | `style_profiles` ユニーク制約 |
+| `20260517000010_unify_drafts_schema.sql` | ドラフトスキーマ統合 |
+| `20260517015920_create_content_calendar_events.sql` | コンテンツカレンダーテーブル |
+| `20260517020327_create_post_templates.sql` | 投稿テンプレートテーブル |
+| `20260518000001_create_auto_plug_rules.sql` | オートプラグルールテーブル |
+| `20260518000002_create_evergreen_rules.sql` | エバーグリーンルールテーブル |
+| `20260518000003_create_teams.sql` | チームテーブル |
+| `20260519000001_create_ai_usage_logs.sql` | AI 使用量ログテーブル |
+| `20260519000002_create_subscriptions.sql` | Stripe サブスクリプションテーブル |
 
 ## ディレクトリ構成
 
@@ -149,27 +165,87 @@ Vercel Cron（`vercel.json` に定義）が毎分 `/smart-social/api/cron/schedu
 smart-social/
 ├── app/
 │   ├── api/
-│   │   ├── auth/          # 認証コールバック
+│   │   ├── accounts/        # X アカウント登録・管理
+│   │   ├── analytics/       # 投稿分析データ
+│   │   ├── auth/            # 認証コールバック
+│   │   ├── auto-plug/       # オートプラグルール CRUD
+│   │   ├── content-calendar/ # コンテンツカレンダー CRUD
 │   │   ├── cron/
-│   │   │   └── scheduler/ # Vercel Cron: スケジュール投稿実行
-│   │   ├── drafts/        # ドラフト CRUD API
-│   │   └── schedule/      # スケジュール CRUD API
+│   │   │   └── scheduler/   # Vercel Cron: スケジュール投稿実行（毎分）
+│   │   ├── drafts/          # ドラフト CRUD・AI 生成
+│   │   ├── evergreen/       # エバーグリーン投稿 CRUD
+│   │   ├── media/           # メディアアップロード
+│   │   ├── profile/         # 文体プロファイル生成・手動編集
+│   │   ├── schedule/        # スケジュール CRUD
+│   │   ├── stripe/          # Stripe Checkout / Portal / Webhook
+│   │   ├── teams/           # チーム管理
+│   │   ├── templates/       # 投稿テンプレート CRUD
+│   │   ├── usage/           # AI 使用量集計
+│   │   └── x/               # X API プロキシ（timeline / lookup 等）
 │   ├── auth/
-│   │   ├── callback/      # OAuth コールバック
-│   │   └── login/         # ログインページ
+│   │   ├── callback/        # OAuth コールバック
+│   │   └── login/           # ログインページ
 │   └── dashboard/
-│       ├── drafts/        # ドラフト管理画面
-│       └── schedule/      # スケジュール管理画面
+│       ├── accounts/        # X アカウント管理画面
+│       ├── analytics/       # 分析ダッシュボード
+│       ├── drafts/          # ドラフト管理画面
+│       ├── evergreen/       # エバーグリーン管理画面
+│       ├── mentions/        # メンション一覧
+│       ├── schedule/        # スケジュール管理画面
+│       ├── settings/        # 設定（文体プロファイル編集含む）
+│       ├── timeline/        # タイムライン
+│       └── usage/           # AI 使用量ダッシュボード
 ├── components/
-│   ├── drafts/            # ドラフト関連コンポーネント
-│   └── ui/                # shadcn/ui ベースの汎用コンポーネント
+│   ├── dashboard/           # ダッシュボード共通コンポーネント
+│   ├── drafts/              # ドラフト関連コンポーネント
+│   ├── evergreen/           # エバーグリーン関連コンポーネント
+│   ├── profile/             # 文体プロファイル関連コンポーネント
+│   └── ui/                  # shadcn/ui ベースの汎用コンポーネント
 ├── lib/
-│   ├── supabase/          # Supabase クライアント（client / server）
-│   └── x/                 # X API クライアント
+│   ├── ai/
+│   │   ├── models.ts        # AI モデル定数（プロバイダー切り替えはここだけ）
+│   │   └── client.ts        # generateStyleProfile / generateDraftCandidates
+│   ├── precheck/
+│   │   └── engine.ts        # 投稿品質チェック（Precheck）
+│   ├── stripe.ts            # Stripe クライアント
+│   ├── subscription.ts      # サブスクリプション取得ヘルパー
+│   ├── supabase/            # Supabase クライアント（client / server）
+│   ├── usage/               # AI 使用量ロギング・コスト計算
+│   └── x/                   # X API クライアント
 ├── supabase/
-│   └── migrations/        # DB マイグレーション SQL
-├── types/
-│   └── app.ts             # アプリ共通型定義
-├── middleware.ts           # 認証ガード（未ログイン → /auth/login）
-└── vercel.json            # Vercel Cron 設定（毎分実行）
+│   └── migrations/          # DB マイグレーション SQL
+├── __tests__/               # Vitest テストスイート
+├── middleware.ts             # 認証ガード（未ログイン → /auth/login）
+└── vercel.json              # Vercel Cron 設定
 ```
+
+## AI プロバイダー設計
+
+AI モデルの設定は `lib/ai/models.ts` の **1 ファイル**に集約されています。
+
+```typescript
+// lib/ai/models.ts
+import { anthropic } from '@ai-sdk/anthropic'
+
+export const STYLE_PROFILE_MODEL = anthropic('claude-sonnet-4-6')
+export const DRAFT_MODEL = anthropic('claude-sonnet-4-6')
+export const PRECHECK_MODEL = anthropic('claude-haiku-4-5-20251001')
+```
+
+OpenAI / Gemini 等への切り替えはこのファイルのみ変更すれば完結します（Vercel AI SDK による統一インターフェース）。
+
+## プライシング
+
+| プラン | 月額 | 年額 |
+|--------|------|------|
+| Free | ¥0 | — |
+| Pro | ¥4,980 | ¥47,800 |
+| Business | ¥12,800 | ¥122,900 |
+
+## デプロイ
+
+```bash
+vercel --prod
+```
+
+Vercel Cron（`vercel.json`）が毎分 `/api/cron/scheduler` を実行し、スケジュール済み投稿を自動投稿します。
