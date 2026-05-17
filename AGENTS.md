@@ -6,6 +6,21 @@ training data. Read the relevant guide in `node_modules/next/dist/docs/` before 
 Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
+## デプロイ手順
+
+本番デプロイは `scripts/deploy.sh` を使う。マイグレーションの自動適用とVercelデプロイを一括実行する。
+
+```bash
+# 事前: DBパスワードをシェル環境変数にセット（~/.zshrc に export 推奨）
+export SUPABASE_DB_PASSWORD=your_password
+
+# 本番デプロイ（マイグレーション → vercel --prod）
+bash scripts/deploy.sh prod
+```
+
+- `SUPABASE_DB_PASSWORD` が未設定 or パスワード誤りの場合はデプロイを中止する
+- 未コミット変更がある場合もデプロイを中止する
+
 ## Git コミットルール
 
 - issue を解決するコミットには必ず **`closes #N`** または **`fixes #N`** をコミットメッセージ本文に含める
