@@ -279,6 +279,90 @@ describe('PATCH /api/profile', () => {
     )
   })
 
+  it('sample_phrases に非文字列配列（数値を含む配列）を送った場合は400を返す', async () => {
+    // Arrange
+    mockCreateClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1' } },
+          error: null,
+        }),
+      },
+      from: vi.fn(),
+    } as any)
+
+    const request = new Request('http://localhost/api/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ x_account_id: 'account-1', tone: '丁寧でフレンドリー', sample_phrases: [1, 2] }),
+    })
+
+    // Act
+    await PATCH(request)
+
+    // Assert
+    expect(mockNextResponseJson).toHaveBeenCalledWith(
+      { error: expect.any(String) },
+      { status: 400 }
+    )
+  })
+
+  it('emoji_usage に文字列以外（数値）を送った場合は400を返す', async () => {
+    // Arrange
+    mockCreateClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1' } },
+          error: null,
+        }),
+      },
+      from: vi.fn(),
+    } as any)
+
+    const request = new Request('http://localhost/api/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ x_account_id: 'account-1', tone: '丁寧でフレンドリー', emoji_usage: 42 }),
+    })
+
+    // Act
+    await PATCH(request)
+
+    // Assert
+    expect(mockNextResponseJson).toHaveBeenCalledWith(
+      { error: expect.any(String) },
+      { status: 400 }
+    )
+  })
+
+  it('avg_length が10000超の場合は400を返す', async () => {
+    // Arrange
+    mockCreateClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1' } },
+          error: null,
+        }),
+      },
+      from: vi.fn(),
+    } as any)
+
+    const request = new Request('http://localhost/api/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ x_account_id: 'account-1', tone: '丁寧でフレンドリー', avg_length: 10001 }),
+    })
+
+    // Act
+    await PATCH(request)
+
+    // Assert
+    expect(mockNextResponseJson).toHaveBeenCalledWith(
+      { error: expect.any(String) },
+      { status: 400 }
+    )
+  })
+
   it('avg_length が小数（3.5）の場合は400を返す', async () => {
     // Arrange
     mockCreateClient.mockResolvedValue({

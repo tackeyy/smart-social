@@ -36,9 +36,15 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'toneは500文字以内で指定してください' }, { status: 400 })
   }
 
+  if (body.emoji_usage !== undefined) {
+    if (typeof body.emoji_usage !== 'string') {
+      return NextResponse.json({ error: 'emoji_usageは文字列で指定してください' }, { status: 400 })
+    }
+  }
+
   if (body.avg_length !== undefined) {
-    if (!Number.isInteger(body.avg_length) || (body.avg_length as number) < 0) {
-      return NextResponse.json({ error: 'avg_lengthは0以上の整数で指定してください' }, { status: 400 })
+    if (!Number.isInteger(body.avg_length) || (body.avg_length as number) < 0 || (body.avg_length as number) > 10000) {
+      return NextResponse.json({ error: 'avg_lengthは0以上10000以下の整数で指定してください' }, { status: 400 })
     }
   }
 
