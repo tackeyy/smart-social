@@ -37,6 +37,11 @@ export function ProfileSection({ xAccountId, initialProfile, analyzedAt }: Profi
   }
 
   function cancelEdit() {
+    setTone(profile?.tone ?? '')
+    setEmojiUsage(profile?.emoji_usage ?? '')
+    setAvgLength(profile?.avg_length ?? '')
+    setPatterns(profile?.patterns ?? [])
+    setSamplePhrases(profile?.sample_phrases ?? [])
     setMode('view')
   }
 
@@ -164,6 +169,7 @@ export function ProfileSection({ xAccountId, initialProfile, analyzedAt }: Profi
                 onChange={(e) => setTone(e.target.value)}
                 placeholder="例：フレンドリーで親しみやすいトーン"
                 rows={3}
+                maxLength={500}
               />
             </div>
 
@@ -188,6 +194,7 @@ export function ProfileSection({ xAccountId, initialProfile, analyzedAt }: Profi
                 id="profile-avg-length"
                 type="number"
                 min={0}
+                max={10000}
                 step={1}
                 value={avgLength}
                 onChange={(e) => {

@@ -64,6 +64,9 @@ export function TagInput({
           追加
         </Button>
       </div>
+      {inputValue.length >= maxLength && (
+        <p className="text-xs text-manavi-error">最大{maxLength}文字まで</p>
+      )}
       {tags.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {tags.map((tag, index) => (

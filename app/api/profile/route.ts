@@ -32,9 +32,25 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'toneは必須です' }, { status: 400 })
   }
 
+  if (body.tone.length > 500) {
+    return NextResponse.json({ error: 'toneは500文字以内で指定してください' }, { status: 400 })
+  }
+
   if (body.avg_length !== undefined) {
     if (!Number.isInteger(body.avg_length) || (body.avg_length as number) < 0) {
       return NextResponse.json({ error: 'avg_lengthは0以上の整数で指定してください' }, { status: 400 })
+    }
+  }
+
+  if (body.patterns !== undefined) {
+    if (!Array.isArray(body.patterns) || body.patterns.some((p: unknown) => typeof p !== 'string')) {
+      return NextResponse.json({ error: 'patternsは文字列の配列で指定してください' }, { status: 400 })
+    }
+  }
+
+  if (body.sample_phrases !== undefined) {
+    if (!Array.isArray(body.sample_phrases) || body.sample_phrases.some((p: unknown) => typeof p !== 'string')) {
+      return NextResponse.json({ error: 'sample_phrasesは文字列の配列で指定してください' }, { status: 400 })
     }
   }
 
