@@ -61,10 +61,6 @@ describe('POST /api/stripe/portal', () => {
       from: vi.fn(),
     } as any)
 
-    const request = new Request('http://localhost/api/stripe/portal', {
-      method: 'POST',
-    })
-
     // Act
     await POST()
 
