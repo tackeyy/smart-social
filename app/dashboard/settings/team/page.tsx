@@ -77,7 +77,7 @@ export default function TeamPage() {
 
   useEffect(() => { void load() }, [load])
 
-  async function handleCreateTeam(e: React.SyntheticEvent<HTMLFormElement><HTMLFormElement>) {
+  async function handleCreateTeam(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
     const name = createName.trim()
     if (!name) return
@@ -102,7 +102,7 @@ export default function TeamPage() {
     }
   }
 
-  async function handleSaveName(e: React.SyntheticEvent<HTMLFormElement><HTMLFormElement>) {
+  async function handleSaveName(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!team) return
     const name = editName.trim()
@@ -128,7 +128,7 @@ export default function TeamPage() {
     }
   }
 
-  async function handleInvite(e: React.SyntheticEvent<HTMLFormElement><HTMLFormElement>) {
+  async function handleInvite(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!team) return
     const email = inviteEmail.trim()
