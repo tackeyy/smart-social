@@ -81,6 +81,11 @@ ${sourceTweet}
     throw new Error('Failed to extract JSON array from Claude response')
   }
 
-  const candidates = JSON.parse(jsonMatch[0]) as string[]
+  let candidates: string[]
+  try {
+    candidates = JSON.parse(jsonMatch[0]) as string[]
+  } catch {
+    throw new Error('Failed to parse JSON array from Claude response')
+  }
   return candidates.slice(0, 3)
 }
