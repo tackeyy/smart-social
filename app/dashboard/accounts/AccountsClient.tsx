@@ -2,8 +2,17 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import type { XAccount } from '@/types/app'
 
 interface AccountsClientProps {
@@ -13,19 +22,22 @@ interface AccountsClientProps {
 export function AccountsClient({ accounts }: AccountsClientProps) {
   const router = useRouter()
   const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<XAccount | null>(null)
 
   async function handleDelete(id: number) {
-    if (!confirm('このアカウントの連携を解除しますか？')) return
-
     setDeletingId(id)
     try {
-      const res = await fetch(`/api/accounts/${id}`, { method: 'DELETE' })
+      const res = await fetch(`/smart-social/api/accounts/${id}`, { method: 'DELETE' })
       if (!res.ok) {
         const body = await res.json()
-        alert(body.error ?? '削除に失敗しました')
+        toast.error(body.error ?? '削除に失敗しました')
         return
       }
+      toast.success('アカウント連携を解除しました')
+      setDeleteTarget(null)
       router.refresh()
+    } catch {
+      toast.error('削除に失敗しました')
     } finally {
       setDeletingId(null)
     }
@@ -35,7 +47,7 @@ export function AccountsClient({ accounts }: AccountsClientProps) {
     <div className="max-w-2xl space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">アカウント管理</h1>
-        <a href="/api/auth/x/initiate">
+        <a href="/smart-social/api/auth/x/initiate">
           <Button>Xアカウントを連携する</Button>
         </a>
       </div>
@@ -56,7 +68,7 @@ export function AccountsClient({ accounts }: AccountsClientProps) {
                 <Button
                   variant="destructive"
                   size="sm"
-                  onClick={() => handleDelete(account.id)}
+                  onClick={() => setDeleteTarget(account)}
                   disabled={deletingId === account.id}
                 >
                   {deletingId === account.id ? '削除中...' : '削除'}
@@ -66,6 +78,35 @@ export function AccountsClient({ accounts }: AccountsClientProps) {
           ))}
         </div>
       )}
+
+      <Dialog open={deleteTarget !== null} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>アカウント連携を解除</DialogTitle>
+            <DialogDescription>
+              @{deleteTarget?.screen_name} の連携を解除します。解除後も再連携できます。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeleteTarget(null)}
+              disabled={deletingId !== null}
+            >
+              キャンセル
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => { if (deleteTarget) void handleDelete(deleteTarget.id) }}
+              disabled={deletingId !== null}
+            >
+              {deletingId !== null ? '解除中...' : '解除する'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

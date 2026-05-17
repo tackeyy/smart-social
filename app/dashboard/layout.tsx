@@ -56,6 +56,18 @@ export default async function DashboardLayout({
             </span>
           </>
         }
+        mobileContextSlot={
+          <>
+            <AccountSelector
+              accounts={xAccounts}
+              currentAccountId={currentAccount.id}
+            />
+            <PlanBadge plan={currentPlan} />
+            <span className="min-w-0 basis-full text-xs text-white/45 truncate">
+              {user.email}
+            </span>
+          </>
+        }
       />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}

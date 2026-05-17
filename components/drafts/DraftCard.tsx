@@ -6,6 +6,14 @@ import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import type { Draft, DraftStatus } from '@/types/app'
 import { detectExternalLink } from '@/lib/utils/detectExternalLink'
 
@@ -33,6 +41,7 @@ export function DraftCard({ draft, onStatusChange }: DraftCardProps) {
   const [mediaId, setMediaId] = useState<string | null>(null)
   const [mediaPreviewUrl, setMediaPreviewUrl] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const charCount = content.length
@@ -156,6 +165,7 @@ export function DraftCard({ draft, onStatusChange }: DraftCardProps) {
       if (!res.ok) throw new Error('却下失敗')
       toast.success('ドラフトを却下しました')
       onStatusChange(draft.id, 'rejected')
+      setRejectDialogOpen(false)
     } catch {
       toast.error('却下に失敗しました')
     } finally {
@@ -310,7 +320,7 @@ export function DraftCard({ draft, onStatusChange }: DraftCardProps) {
       )}
 
       {isActionable && !isEditing && (
-        <CardFooter className="flex flex-col gap-2 pt-0 items-start">
+        <CardFooter className="flex flex-col gap-3 pt-0 items-start">
           {/* メディアプレビュー */}
           {mediaPreviewUrl && (
             <div className="relative w-full">
@@ -329,54 +339,87 @@ export function DraftCard({ draft, onStatusChange }: DraftCardProps) {
             </div>
           )}
 
-          <div className="flex gap-2 w-full">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setIsEditing(true)}
-              disabled={isSubmitting}
-            >
-              編集
-            </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={handleReject}
-              disabled={isSubmitting}
-            >
-              却下
-            </Button>
+          <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setIsEditing(true)}
+                disabled={isSubmitting}
+              >
+                編集
+              </Button>
 
-            {/* 画像添付 */}
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={isSubmitting || isUploading}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {isUploading ? 'アップロード中...' : '画像を添付'}
-            </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/gif"
-              className="sr-only"
-              onChange={handleFileSelect}
-              disabled={isSubmitting || isUploading}
-              aria-label="画像を添付"
-            />
+              {/* 画像添付 */}
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={isSubmitting || isUploading}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {isUploading ? 'アップロード中...' : '画像を添付'}
+              </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif"
+                className="sr-only"
+                onChange={handleFileSelect}
+                disabled={isSubmitting || isUploading}
+                aria-label="画像を添付"
+              />
+
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setRejectDialogOpen(true)}
+                disabled={isSubmitting}
+                className="ml-auto text-red-600 hover:bg-red-50 hover:text-red-700 sm:ml-2"
+              >
+                却下
+              </Button>
+            </div>
 
             <Button
               size="sm"
               onClick={handleApprove}
               disabled={isSubmitting || isOverLimit || isUploading}
-              className="ml-auto"
+              className="w-full sm:w-auto sm:min-w-32"
             >
               {isSubmitting ? '処理中...' : '承認して投稿'}
             </Button>
           </div>
         </CardFooter>
       )}
+
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>ドラフトを却下しますか？</DialogTitle>
+            <DialogDescription>
+              却下すると、このドラフトは承認待ち一覧から外れます。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setRejectDialogOpen(false)}
+              disabled={isSubmitting}
+            >
+              キャンセル
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleReject}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? '却下中...' : '却下する'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }

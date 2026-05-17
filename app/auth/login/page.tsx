@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
+const BASE_PATH = '/smart-social'
+
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
@@ -16,7 +18,7 @@ export default function LoginPage() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/smart-social/api/auth/send-magic-link', {
+      const res = await fetch(`${BASE_PATH}/api/auth/send-magic-link`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
@@ -35,10 +37,17 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-manavi-bg px-4">
+    <div className="min-h-screen flex items-center justify-center bg-manavi-bg px-5 py-8">
       <div className="w-full max-w-sm">
+        <a
+          href={`${BASE_PATH}/`}
+          className="mb-6 inline-flex text-sm font-medium text-manavi-navy-light transition-colors hover:text-manavi-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-manavi-primary focus-visible:ring-offset-2"
+        >
+          ← LPへ戻る
+        </a>
+
         {/* ロゴ */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-7">
           <div className="inline-flex items-center justify-center w-12 h-12 mb-4">
             <svg viewBox="0 0 512 512" className="w-12 h-12">
               <defs>
@@ -67,7 +76,7 @@ export default function LoginPage() {
             Smart Social
           </h1>
           <p className="text-sm text-manavi-navy-light mt-1">
-            アカウントにサインイン
+            メールでサインイン
           </p>
         </div>
 
@@ -76,6 +85,9 @@ export default function LoginPage() {
             <h2 className="text-base font-medium text-manavi-navy">
               メールアドレスで続ける
             </h2>
+            <p className="mt-1 text-sm leading-6 text-manavi-navy-light">
+              ログイン用リンクをメールで送ります。パスワードは不要です。
+            </p>
           </CardHeader>
           <CardContent className="px-6 pb-6">
             {sent ? (
@@ -84,7 +96,7 @@ export default function LoginPage() {
                   マジックリンクを送信しました
                 </p>
                 <p className="text-xs text-manavi-navy-light mt-1">
-                  メールを確認してリンクをクリックしてください。
+                  メールを確認して、リンクをクリックしてください。
                 </p>
               </div>
             ) : (
@@ -104,6 +116,7 @@ export default function LoginPage() {
                   <Input
                     id="email"
                     type="email"
+                    autoComplete="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -118,13 +131,30 @@ export default function LoginPage() {
                 >
                   {loading ? '送信中...' : 'マジックリンクを送信'}
                 </Button>
+                <p className="text-xs leading-5 text-manavi-navy-light">
+                  入力したメールアドレス宛に、ログイン専用のリンクを送信します。
+                </p>
               </form>
             )}
           </CardContent>
         </Card>
 
-        <p className="text-center text-xs text-manavi-muted mt-6">
-          ログインすることで、利用規約とプライバシーポリシーに同意したことになります。
+        <p className="mt-6 text-center text-xs leading-6 text-manavi-navy-light">
+          ログインすることで、
+          <a
+            href={`${BASE_PATH}/terms`}
+            className="font-medium text-manavi-navy underline-offset-4 transition-colors hover:text-manavi-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-manavi-primary focus-visible:ring-offset-2"
+          >
+            利用規約
+          </a>
+          と
+          <a
+            href={`${BASE_PATH}/privacy`}
+            className="font-medium text-manavi-navy underline-offset-4 transition-colors hover:text-manavi-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-manavi-primary focus-visible:ring-offset-2"
+          >
+            プライバシーポリシー
+          </a>
+          に同意したことになります。
         </p>
       </div>
     </div>

@@ -19,15 +19,34 @@ describe('NavBar', () => {
     expect(screen.getByText('Smart Social')).toBeTruthy()
   })
 
-  it('全8ナビリンクが存在する', () => {
+  it('初期状態で主要ナビリンクが表示され、その他ナビは閉じている', () => {
     render(React.createElement(NavBar))
     expect(screen.getAllByRole('link', { name: 'ダッシュボード' }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: 'ドラフト' }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: 'タイムライン' }).length).toBeGreaterThan(0)
-    expect(screen.getAllByRole('link', { name: 'メンション' }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: 'スケジュール' }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: '分析' }).length).toBeGreaterThan(0)
+
+    const secondaryButton = screen.getByRole('button', { name: 'その他のナビゲーション' })
+    expect(secondaryButton.getAttribute('aria-expanded')).toBe('false')
+    expect(secondaryButton.getAttribute('aria-controls')).toBe('dashboard-secondary-nav')
+    expect(screen.queryByRole('link', { name: 'メンション' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'アカウント' })).toBeNull()
+    expect(screen.queryByRole('link', { name: '使用量' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'プラン' })).toBeNull()
+    expect(screen.queryByRole('link', { name: '設定' })).toBeNull()
+  })
+
+  it('その他のナビゲーションをクリックすると副次ナビリンクが表示される', () => {
+    render(React.createElement(NavBar))
+    const secondaryButton = screen.getByRole('button', { name: 'その他のナビゲーション' })
+    fireEvent.click(secondaryButton)
+
+    expect(secondaryButton.getAttribute('aria-expanded')).toBe('true')
+    expect(screen.getAllByRole('link', { name: 'メンション' }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: 'アカウント' }).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('link', { name: '使用量' }).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('link', { name: 'プラン' }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: '設定' }).length).toBeGreaterThan(0)
   })
 

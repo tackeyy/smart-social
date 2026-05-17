@@ -2,6 +2,12 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
+function hasInteractiveCardAffordance(className?: string) {
+  return /\b(?:cursor-pointer|hover:|focus-visible:|ds-card-interactive)\b/.test(
+    className ?? ""
+  )
+}
+
 const Card = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
@@ -9,7 +15,8 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "rounded-lg border bg-card text-card-foreground shadow-sm",
+      "ds-card rounded-[var(--ds-radius-card)] border bg-card text-card-foreground",
+      hasInteractiveCardAffordance(className) && "ds-card-interactive",
       className
     )}
     {...props}

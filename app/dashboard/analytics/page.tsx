@@ -64,6 +64,52 @@ function ScoreBar({ score, max }: { score: number; max: number }) {
   )
 }
 
+function SummaryStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-[120px]">
+      <p className="text-xs font-medium text-manavi-muted">{label}</p>
+      <p className="mt-1 text-xl font-semibold tabular-nums text-manavi-navy">{value}</p>
+    </div>
+  )
+}
+
+function TweetMetricCard({
+  metric,
+  maxScore,
+  accountId,
+}: {
+  metric: TweetMetrics
+  maxScore: number
+  accountId: string | null
+}) {
+  return (
+    <article className="rounded-md border border-manavi-border bg-white p-4">
+      <p className="line-clamp-3 text-sm font-medium text-manavi-navy" title={metric.text}>
+        {metric.text}
+      </p>
+      <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+        <SummaryStat label="インプレッション" value={metric.impression_count.toLocaleString()} />
+        <SummaryStat label="E率" value={formatRate(metric.engagement_rate)} />
+        <SummaryStat label="いいね" value={metric.like_count.toLocaleString()} />
+        <SummaryStat label="RT" value={metric.retweet_count.toLocaleString()} />
+        <SummaryStat label="引用" value={metric.quote_count.toLocaleString()} />
+        <SummaryStat label="返信" value={metric.reply_count.toLocaleString()} />
+      </div>
+      <div className="mt-4">
+        <ScoreBar score={metric.engagement_score} max={maxScore} />
+      </div>
+      <div className="mt-4">
+        <RegisterEvergreenButton
+          tweetId={metric.tweet_id}
+          content={metric.text}
+          score={metric.engagement_score}
+          accountId={accountId}
+        />
+      </div>
+    </article>
+  )
+}
+
 function AnalyticsContent() {
   const searchParams = useSearchParams()
   const accountId = searchParams.get('account_id')
@@ -172,187 +218,142 @@ function AnalyticsContent() {
 
       {!loading && !error && (
         <>
-          {/* フォロワー数カード */}
-          {userStats && (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <Card className="shadow-manavi-sm rounded-[6px] border-manavi-border">
-                <CardHeader className="pb-2 pt-5 px-5">
-                  <CardTitle className="text-xs font-medium text-manavi-navy-light uppercase tracking-wide">フォロワー数</CardTitle>
-                </CardHeader>
-                <CardContent className="px-5 pb-5">
-                  <p className="text-3xl font-semibold tabular-nums text-manavi-navy">{userStats.followers_count.toLocaleString()}</p>
-                </CardContent>
-              </Card>
-              <Card className="shadow-manavi-sm rounded-[6px] border-manavi-border">
-                <CardHeader className="pb-2 pt-5 px-5">
-                  <CardTitle className="text-xs font-medium text-manavi-navy-light uppercase tracking-wide">フォロー中</CardTitle>
-                </CardHeader>
-                <CardContent className="px-5 pb-5">
-                  <p className="text-3xl font-semibold tabular-nums text-manavi-navy">{userStats.following_count.toLocaleString()}</p>
-                </CardContent>
-              </Card>
-              <Card className="shadow-manavi-sm rounded-[6px] border-manavi-border">
-                <CardHeader className="pb-2 pt-5 px-5">
-                  <CardTitle className="text-xs font-medium text-manavi-navy-light uppercase tracking-wide">総ツイート数</CardTitle>
-                </CardHeader>
-                <CardContent className="px-5 pb-5">
-                  <p className="text-3xl font-semibold tabular-nums text-manavi-navy">{userStats.tweet_count.toLocaleString()}</p>
-                </CardContent>
-              </Card>
-              <Card className="shadow-manavi-sm rounded-[6px] border-manavi-border">
-                <CardHeader className="pb-2 pt-5 px-5">
-                  <CardTitle className="text-xs font-medium text-manavi-navy-light uppercase tracking-wide">リスト掲載数</CardTitle>
-                </CardHeader>
-                <CardContent className="px-5 pb-5">
-                  <p className="text-3xl font-semibold tabular-nums text-manavi-navy">{userStats.listed_count.toLocaleString()}</p>
-                </CardContent>
-              </Card>
+          {/* ツイートごとのメトリクス */}
+          <section className="rounded-md border border-manavi-border bg-white">
+            <div className="px-6 py-5">
+              <h2 className="text-base font-semibold text-manavi-navy">ツイート別メトリクス（{maxResults}件）</h2>
             </div>
-          )}
-
-          {/* サマリーカード */}
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <Card className="shadow-manavi-sm rounded-[6px] border-manavi-border">
-              <CardHeader className="pb-2 pt-5 px-5">
-                <CardTitle className="text-xs font-medium text-manavi-navy-light uppercase tracking-wide">合計インプレッション</CardTitle>
-              </CardHeader>
-              <CardContent className="px-5 pb-5">
-                <p className="text-3xl font-semibold tabular-nums text-manavi-navy">{totalImpressions.toLocaleString()}</p>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-manavi-sm rounded-[6px] border-manavi-border">
-              <CardHeader className="pb-2 pt-5 px-5">
-                <CardTitle className="text-xs font-medium text-manavi-navy-light uppercase tracking-wide">合計いいね</CardTitle>
-              </CardHeader>
-              <CardContent className="px-5 pb-5">
-                <p className="text-3xl font-semibold tabular-nums text-manavi-navy">{totalLikes.toLocaleString()}</p>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-manavi-sm rounded-[6px] border-manavi-border">
-              <CardHeader className="pb-2 pt-5 px-5">
-                <CardTitle className="text-xs font-medium text-manavi-navy-light uppercase tracking-wide">合計RT</CardTitle>
-              </CardHeader>
-              <CardContent className="px-5 pb-5">
-                <p className="text-3xl font-semibold tabular-nums text-manavi-navy">{totalRetweets.toLocaleString()}</p>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-manavi-sm rounded-[6px] border-manavi-border">
-              <CardHeader className="pb-2 pt-5 px-5">
-                <CardTitle className="text-xs font-medium text-manavi-navy-light uppercase tracking-wide">平均エンゲージメント率</CardTitle>
-              </CardHeader>
-              <CardContent className="px-5 pb-5">
-                <p className="text-3xl font-semibold tabular-nums text-manavi-navy">{formatRate(avgEngagementRate)}</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* スコアTop3 */}
-          {top3.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">スコアTop 3</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {top3.map((m, idx) => (
-                  <div key={m.tweet_id} className="flex items-start gap-3">
-                    <span className="text-xs font-bold text-manavi-navy-light w-4 shrink-0 pt-0.5">#{idx + 1}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-gray-700 truncate mb-1" title={m.text}>{m.text}</p>
-                      <ScoreBar score={m.engagement_score} max={maxScore} />
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* 最適投稿時間 */}
-          {optimalTimes.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">最適投稿時間（JST）</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <p className="text-xs text-gray-500 mb-3">過去{maxResults}件のデータから算出したエンゲージメントスコア平均</p>
-                {optimalTimes.map((t, idx) => (
-                  <div key={t.hour} className="flex items-center gap-3">
-                    <span className="text-xs font-bold text-manavi-navy-light w-4 shrink-0">#{idx + 1}</span>
-                    <span className="text-sm font-semibold tabular-nums text-manavi-navy w-16 shrink-0">
-                      {String(t.hour).padStart(2, '0')}:00
-                    </span>
-                    <div className="flex-1 bg-gray-100 rounded-full h-2">
-                      <div
-                        className="bg-green-500 rounded-full h-2 transition-all duration-300"
-                        style={{ width: maxOptimalScore > 0 ? `${(t.avg_score / maxOptimalScore) * 100}%` : '0%' }}
-                      />
-                    </div>
-                    <span className="text-xs text-gray-500 shrink-0 w-24 text-right">
-                      avg {Math.round(t.avg_score)} ({t.count}件)
-                    </span>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* ツイートごとのメトリクス表 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">ツイート別メトリクス（{maxResults}件）</CardTitle>
-            </CardHeader>
-            <CardContent>
+            <div className="px-6 pb-6">
               {sorted.length === 0 ? (
                 <p className="text-sm text-gray-500">データがありません</p>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[240px]">本文</TableHead>
-                        <TableHead className="text-right">いいね</TableHead>
-                        <TableHead className="text-right">RT</TableHead>
-                        <TableHead className="text-right">引用</TableHead>
-                        <TableHead className="text-right">返信</TableHead>
-                        <TableHead className="text-right">インプレッション</TableHead>
-                        <TableHead className="text-right">E率</TableHead>
-                        <TableHead className="min-w-[160px]" title="RT×20 + 引用×15 + 返信×13.5">スコア</TableHead>
-                        <TableHead className="w-[140px]"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {sorted.map((m) => (
-                        <TableRow key={m.tweet_id}>
-                          <TableCell className="font-medium">
-                            <span title={m.text}>{truncate(m.text, TEXT_PREVIEW_LENGTH)}</span>
-                          </TableCell>
-                          <TableCell className="text-right">{m.like_count.toLocaleString()}</TableCell>
-                          <TableCell className="text-right">{m.retweet_count.toLocaleString()}</TableCell>
-                          <TableCell className="text-right">{m.quote_count.toLocaleString()}</TableCell>
-                          <TableCell className="text-right">{m.reply_count.toLocaleString()}</TableCell>
-                          <TableCell className="text-right">{m.impression_count.toLocaleString()}</TableCell>
-                          <TableCell className="text-right">{formatRate(m.engagement_rate)}</TableCell>
-                          <TableCell>
-                            <ScoreBar score={m.engagement_score} max={maxScore} />
-                          </TableCell>
-                          <TableCell>
-                            <RegisterEvergreenButton
-                              tweetId={m.tweet_id}
-                              content={m.text}
-                              score={m.engagement_score}
-                              accountId={accountId}
-                            />
-                          </TableCell>
+                <>
+                  <div className="space-y-3 md:hidden">
+                    {sorted.map((m) => (
+                      <TweetMetricCard
+                        key={m.tweet_id}
+                        metric={m}
+                        maxScore={maxScore}
+                        accountId={accountId}
+                      />
+                    ))}
+                  </div>
+                  <div className="hidden md:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[240px]">本文</TableHead>
+                          <TableHead className="text-right">いいね</TableHead>
+                          <TableHead className="text-right">RT</TableHead>
+                          <TableHead className="text-right">引用</TableHead>
+                          <TableHead className="text-right">返信</TableHead>
+                          <TableHead className="text-right">インプレッション</TableHead>
+                          <TableHead className="text-right">E率</TableHead>
+                          <TableHead className="min-w-[160px]" title="RT×20 + 引用×15 + 返信×13.5">スコア</TableHead>
+                          <TableHead className="w-[140px]"></TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                      </TableHeader>
+                      <TableBody>
+                        {sorted.map((m) => (
+                          <TableRow key={m.tweet_id}>
+                            <TableCell className="font-medium">
+                              <span title={m.text}>{truncate(m.text, TEXT_PREVIEW_LENGTH)}</span>
+                            </TableCell>
+                            <TableCell className="text-right">{m.like_count.toLocaleString()}</TableCell>
+                            <TableCell className="text-right">{m.retweet_count.toLocaleString()}</TableCell>
+                            <TableCell className="text-right">{m.quote_count.toLocaleString()}</TableCell>
+                            <TableCell className="text-right">{m.reply_count.toLocaleString()}</TableCell>
+                            <TableCell className="text-right">{m.impression_count.toLocaleString()}</TableCell>
+                            <TableCell className="text-right">{formatRate(m.engagement_rate)}</TableCell>
+                            <TableCell>
+                              <ScoreBar score={m.engagement_score} max={maxScore} />
+                            </TableCell>
+                            <TableCell>
+                              <RegisterEvergreenButton
+                                tweetId={m.tweet_id}
+                                content={m.text}
+                                score={m.engagement_score}
+                                accountId={accountId}
+                              />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </section>
+
+          <section className="rounded-md border border-manavi-border bg-white p-4">
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+              <SummaryStat label="合計インプレッション" value={totalImpressions.toLocaleString()} />
+              <SummaryStat label="平均エンゲージメント率" value={formatRate(avgEngagementRate)} />
+              <SummaryStat label="合計いいね" value={totalLikes.toLocaleString()} />
+              <SummaryStat label="合計RT" value={totalRetweets.toLocaleString()} />
+            </div>
+            {userStats && (
+              <div className="mt-4 grid grid-cols-2 gap-4 border-t border-manavi-border pt-4 text-sm lg:grid-cols-4">
+                <SummaryStat label="フォロワー数" value={userStats.followers_count.toLocaleString()} />
+                <SummaryStat label="フォロー中" value={userStats.following_count.toLocaleString()} />
+                <SummaryStat label="総ツイート数" value={userStats.tweet_count.toLocaleString()} />
+                <SummaryStat label="リスト掲載数" value={userStats.listed_count.toLocaleString()} />
+              </div>
+            )}
+          </section>
+
+          {/* 最適投稿時間 */}
+          {(top3.length > 0 || optimalTimes.length > 0) && (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {top3.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">スコアTop 3</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {top3.map((m, idx) => (
+                      <div key={m.tweet_id} className="flex items-start gap-3">
+                        <span className="w-4 shrink-0 pt-0.5 text-xs font-bold text-manavi-navy-light">#{idx + 1}</span>
+                        <div className="min-w-0 flex-1">
+                          <p className="mb-1 truncate text-xs text-gray-700" title={m.text}>{m.text}</p>
+                          <ScoreBar score={m.engagement_score} max={maxScore} />
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+
+              {optimalTimes.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">最適投稿時間（JST）</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <p className="mb-3 text-xs text-gray-500">過去{maxResults}件のデータから算出したエンゲージメントスコア平均</p>
+                    {optimalTimes.map((t, idx) => (
+                      <div key={t.hour} className="flex items-center gap-3">
+                        <span className="w-4 shrink-0 text-xs font-bold text-manavi-navy-light">#{idx + 1}</span>
+                        <span className="w-16 shrink-0 text-sm font-semibold tabular-nums text-manavi-navy">
+                          {String(t.hour).padStart(2, '0')}:00
+                        </span>
+                        <div className="h-2 flex-1 rounded-full bg-gray-100">
+                          <div
+                            className="h-2 rounded-full bg-green-500 transition-all duration-300"
+                            style={{ width: maxOptimalScore > 0 ? `${(t.avg_score / maxOptimalScore) * 100}%` : '0%' }}
+                          />
+                        </div>
+                        <span className="w-24 shrink-0 text-right text-xs text-gray-500">
+                          avg {Math.round(t.avg_score)} ({t.count}件)
+                        </span>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
         </>
       )}
     </div>
