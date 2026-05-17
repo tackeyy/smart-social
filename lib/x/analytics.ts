@@ -37,6 +37,7 @@ function buildOAuthHeaderWithTokens(
   url: string,
   accessToken: string,
   accessTokenSecret: string,
+  queryParams: Record<string, string> = {},
 ): string {
   const apiKey = process.env.X_API_KEY!
   const apiSecret = process.env.X_API_SECRET!
@@ -50,7 +51,9 @@ function buildOAuthHeaderWithTokens(
     oauth_version: '1.0',
   }
 
-  const sortedParams = Object.entries(oauthParams)
+  const allParams = { ...queryParams, ...oauthParams }
+
+  const sortedParams = Object.entries(allParams)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([k, v]) => `${percentEncode(k)}=${percentEncode(v)}`)
     .join('&')
@@ -107,13 +110,19 @@ export async function fetchTweetMetrics(
 ): Promise<TweetMetrics[]> {
   const maxResults = Math.min(100, Math.max(1, params.max_results ?? 20))
   const endpoint = `${X_API_BASE}/users/${params.x_user_id}/tweets`
-  const url = `${endpoint}?tweet.fields=public_metrics,created_at&max_results=${maxResults}&expansions=referenced_tweets.id`
+  const queryParams: Record<string, string> = {
+    'tweet.fields': 'public_metrics,created_at',
+    max_results: maxResults.toString(),
+    expansions: 'referenced_tweets.id',
+  }
+  const url = `${endpoint}?${new URLSearchParams(queryParams)}`
 
   const authHeader = buildOAuthHeaderWithTokens(
     'GET',
     endpoint,
     params.access_token,
     params.access_token_secret,
+    queryParams,
   )
 
   const response = await fetch(url, {

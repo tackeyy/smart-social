@@ -64,76 +64,76 @@ export default async function UsagePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">AI使用量</h1>
-        <p className="text-white/60 text-sm mt-1">{month} の使用状況</p>
+        <h1 className="text-2xl font-bold text-manavi-navy">AI使用量</h1>
+        <p className="text-manavi-muted text-sm mt-1">{month} の使用状況</p>
       </div>
 
       {/* サマリーカード */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="bg-white/5 border-white/10">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/60">合計トークン</CardTitle>
+        <Card className="shadow-manavi-sm border-manavi-border">
+          <CardHeader className="pb-2 pt-5 px-5">
+            <CardTitle className="text-xs font-medium text-manavi-navy-light uppercase tracking-wide">合計トークン</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-white">
+          <CardContent className="px-5 pb-5">
+            <p className="text-3xl font-semibold tabular-nums text-manavi-navy">
               {totalTokens.toLocaleString()}
             </p>
-            <p className="text-xs text-white/40 mt-1">
+            <p className="text-xs text-manavi-muted mt-1">
               入力: {total_input_tokens.toLocaleString()} / 出力: {total_output_tokens.toLocaleString()}
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-white/5 border-white/10">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/60">推定コスト</CardTitle>
+        <Card className="shadow-manavi-sm border-manavi-border">
+          <CardHeader className="pb-2 pt-5 px-5">
+            <CardTitle className="text-xs font-medium text-manavi-navy-light uppercase tracking-wide">推定コスト</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-white">
+          <CardContent className="px-5 pb-5">
+            <p className="text-3xl font-semibold tabular-nums text-manavi-navy">
               ${total_cost_usd.toFixed(4)}
             </p>
-            <p className="text-xs text-white/40 mt-1">USD（今月累計）</p>
+            <p className="text-xs text-manavi-muted mt-1">USD（今月累計）</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-white/5 border-white/10">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/60">クォータ使用率</CardTitle>
+        <Card className="shadow-manavi-sm border-manavi-border">
+          <CardHeader className="pb-2 pt-5 px-5">
+            <CardTitle className="text-xs font-medium text-manavi-navy-light uppercase tracking-wide">クォータ使用率</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-5 pb-5">
             {quotaLimit > 0 ? (
               <>
-                <p className="text-2xl font-bold text-white">{quotaPct?.toFixed(1)}%</p>
-                <div className="mt-2 h-2 rounded-full bg-white/10">
+                <p className="text-3xl font-semibold tabular-nums text-manavi-navy">{quotaPct?.toFixed(1)}%</p>
+                <div className="mt-2 h-2 rounded-full bg-gray-100">
                   <div
-                    className="h-full rounded-full bg-blue-400 transition-all"
+                    className="h-full rounded-full bg-manavi-primary transition-all"
                     style={{ width: `${Math.min(quotaPct ?? 0, 100)}%` }}
                   />
                 </div>
-                <p className="text-xs text-white/40 mt-1">
+                <p className="text-xs text-manavi-muted mt-1">
                   {totalTokens.toLocaleString()} / {quotaLimit.toLocaleString()} tokens
                 </p>
               </>
             ) : (
-              <p className="text-sm text-white/40">上限なし</p>
+              <p className="text-sm text-manavi-muted">上限なし</p>
             )}
           </CardContent>
         </Card>
       </div>
 
       {/* endpoint 別内訳 */}
-      <Card className="bg-white/5 border-white/10">
+      <Card className="shadow-manavi-sm border-manavi-border">
         <CardHeader>
-          <CardTitle className="text-white text-base">機能別内訳</CardTitle>
+          <CardTitle className="text-manavi-navy text-base">機能別内訳</CardTitle>
         </CardHeader>
         <CardContent>
           {by_endpoint.length === 0 ? (
-            <p className="text-white/40 text-sm">今月の使用記録はありません</p>
+            <p className="text-manavi-muted text-sm">今月の使用記録はありません</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-white/10 text-white/40">
+                  <tr className="border-b border-manavi-border text-manavi-muted">
                     <th className="text-left py-2 pr-4">機能</th>
                     <th className="text-right py-2 pr-4">回数</th>
                     <th className="text-right py-2 pr-4">入力tokens</th>
@@ -143,7 +143,7 @@ export default async function UsagePage() {
                 </thead>
                 <tbody>
                   {by_endpoint.map((row) => (
-                    <tr key={row.endpoint} className="border-b border-white/5 text-white">
+                    <tr key={row.endpoint} className="border-b border-manavi-border text-manavi-navy">
                       <td className="py-2 pr-4">{ENDPOINT_LABELS[row.endpoint] ?? row.endpoint}</td>
                       <td className="text-right py-2 pr-4">{row.calls}</td>
                       <td className="text-right py-2 pr-4">{row.input_tokens.toLocaleString()}</td>

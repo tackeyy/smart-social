@@ -15,6 +15,7 @@ function buildOAuthHeader(
   url: string,
   accessToken: string,
   accessTokenSecret: string,
+  queryParams: Record<string, string> = {},
 ): string {
   const apiKey = process.env.X_API_KEY!
   const apiSecret = process.env.X_API_SECRET!
@@ -31,7 +32,9 @@ function buildOAuthHeader(
     oauth_version: '1.0',
   }
 
-  const sorted = Object.entries(oauthParams)
+  const allParams = { ...queryParams, ...oauthParams }
+
+  const sorted = Object.entries(allParams)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([k, v]) => `${percentEncode(k)}=${percentEncode(v)}`)
     .join('&')
@@ -77,17 +80,16 @@ export async function GET(request: Request) {
   const maxResults = Math.min(100, Math.max(1, parseInt(maxResultsRaw, 10) || 20))
 
   const mentionsUrl = `${X_API_BASE}/users/${account.x_user_id}/mentions`
-  const params = new URLSearchParams({
+  const queryParams: Record<string, string> = {
     max_results: String(maxResults),
     'tweet.fields': 'created_at,text,author_id',
     expansions: 'author_id',
     'user.fields': 'name,username',
-  })
-
-  const authHeader = buildOAuthHeader('GET', mentionsUrl, account.access_token, account.access_token_secret)
+  }
 
   try {
-    const response = await fetch(`${mentionsUrl}?${params}`, {
+    const authHeader = buildOAuthHeader('GET', mentionsUrl, account.access_token, account.access_token_secret, queryParams)
+    const response = await fetch(`${mentionsUrl}?${new URLSearchParams(queryParams)}`, {
       headers: { Authorization: authHeader },
     })
 
