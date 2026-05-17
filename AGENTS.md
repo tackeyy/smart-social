@@ -11,15 +11,17 @@ Heed deprecation notices.
 本番デプロイは `scripts/deploy.sh` を使う。マイグレーションの自動適用とVercelデプロイを一括実行する。
 
 ```bash
-# 事前: DBパスワードをシェル環境変数にセット（~/.zshrc に export 推奨）
-export SUPABASE_DB_PASSWORD=your_password
+# 事前: Supabaseアクセストークンをシェル環境変数にセット（~/.zshrc に export 推奨）
+export SUPABASE_ACCESS_TOKEN=sbp_xxxx  # supabase.com/dashboard/account/tokens
 
 # 本番デプロイ（マイグレーション → vercel --prod）
 bash scripts/deploy.sh prod
 ```
 
-- `SUPABASE_DB_PASSWORD` が未設定 or パスワード誤りの場合はデプロイを中止する
+- `SUPABASE_ACCESS_TOKEN` が未設定の場合はデプロイを中止する
 - 未コミット変更がある場合もデプロイを中止する
+- マイグレーションは Management API 経由で適用（DBパスワード不要）
+- 適用済みのマイグレーションは自動スキップ
 
 ## Git コミットルール
 

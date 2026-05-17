@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 # deploy.sh — マイグレーション適用 → 本番デプロイ
+# 必要な環境変数: SUPABASE_ACCESS_TOKEN, SUPABASE_PROJECT_REF
 set -euo pipefail
 
 TARGET="${1:-prod}"
+PROJECT_REF="${SUPABASE_PROJECT_REF:-rwbfafdivhzfzzwrkviy}"
+ACCESS_TOKEN="${SUPABASE_ACCESS_TOKEN:-}"
+API_BASE="https://api.supabase.com/v1/projects/${PROJECT_REF}/database/query"
 
 echo "=== preflight ==="
 
@@ -13,23 +17,55 @@ if [[ -n "$(git status --porcelain)" ]]; then
   exit 1
 fi
 
-# DBパスワード確認
-if [[ -z "${SUPABASE_DB_PASSWORD:-}" ]]; then
-  echo "ERROR: SUPABASE_DB_PASSWORD が未設定です。"
-  echo "  export SUPABASE_DB_PASSWORD=your_password"
+# アクセストークン確認
+if [[ -z "$ACCESS_TOKEN" ]]; then
+  echo "ERROR: SUPABASE_ACCESS_TOKEN が未設定です。"
+  echo "  export SUPABASE_ACCESS_TOKEN=sbp_xxxx"
   exit 1
 fi
 
 echo "=== migration ==="
 
-# 未適用マイグレーションの確認と適用
-MIGRATION_OUTPUT=$(SUPABASE_DB_PASSWORD="$SUPABASE_DB_PASSWORD" npx supabase db push --linked 2>&1)
-echo "$MIGRATION_OUTPUT"
+MIGRATIONS_DIR="supabase/migrations"
+APPLIED=0
+SKIPPED=0
 
-if echo "$MIGRATION_OUTPUT" | grep -q "auth"; then
-  echo "ERROR: DBパスワードが正しくありません。Supabase Dashboardで確認してください。"
-  exit 1
-fi
+for sql_file in "$MIGRATIONS_DIR"/*.sql; do
+  [[ -f "$sql_file" ]] || continue
+  migration_name=$(basename "$sql_file")
+
+  # 適用済みチェック: supabase_migrations テーブルを確認
+  CHECK_SQL="SELECT COUNT(*) AS cnt FROM supabase_migrations.schema_migrations WHERE version = '${migration_name%.sql}';"
+  RESULT=$(curl -s -X POST "$API_BASE" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"query\": $(echo "$CHECK_SQL" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))')}" 2>&1)
+
+  COUNT=$(echo "$RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['cnt'] if d else '0')" 2>/dev/null || echo "0")
+
+  if [[ "$COUNT" != "0" ]]; then
+    echo "  SKIP (already applied): $migration_name"
+    SKIPPED=$((SKIPPED + 1))
+    continue
+  fi
+
+  echo "  APPLY: $migration_name"
+  SQL=$(cat "$sql_file")
+  APPLY_RESULT=$(curl -s -X POST "$API_BASE" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"query\": $(echo "$SQL" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))')}" 2>&1)
+
+  if echo "$APPLY_RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); exit(0 if isinstance(d, list) else 1)" 2>/dev/null; then
+    echo "    => OK"
+    APPLIED=$((APPLIED + 1))
+  else
+    echo "    => ERROR: $APPLY_RESULT"
+    exit 1
+  fi
+done
+
+echo "  migration done: applied=$APPLIED, skipped=$SKIPPED"
 
 echo "=== deploy ==="
 
