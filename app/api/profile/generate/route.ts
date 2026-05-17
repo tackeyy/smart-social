@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-import { generateStyleProfile } from '@/lib/claude/client'
+import { generateStyleProfile } from '@/lib/ai/client'
+import { STYLE_PROFILE_MODEL_ID } from '@/lib/ai/models'
 import { checkRateLimit } from '@/lib/rate-limit'
 
 const X_API_BASE = 'https://api.x.com/2'
@@ -75,7 +76,7 @@ export async function POST(request: Request) {
     const { error: upsertError } = await supabase
       .from('style_profiles')
       .upsert(
-        { x_account_id: body.x_account_id, profile_data: profileData, model_version: 'claude-sonnet-4-6', analyzed_at: new Date().toISOString() },
+        { x_account_id: body.x_account_id, profile_data: profileData, model_version: STYLE_PROFILE_MODEL_ID, analyzed_at: new Date().toISOString() },
         { onConflict: 'x_account_id' }
       )
 

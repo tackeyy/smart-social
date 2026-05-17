@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { GenerateProfileButton } from '@/components/GenerateProfileButton'
 import { TagInput } from '@/components/profile/TagInput'
-import type { StyleProfile } from '@/lib/claude/client'
+import type { StyleProfile } from '@/lib/ai/client'
 
 interface ProfileSectionProps {
   xAccountId: number

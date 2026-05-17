@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-import type { StyleProfile } from '@/lib/claude/client'
+import type { StyleProfile } from '@/lib/ai/client'
 
 export async function PATCH(request: Request) {
   const supabase = await createClient()

@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { ProfileSection } from '@/components/profile/ProfileSection'
 import type { XAccount } from '@/types/app'
-import type { StyleProfile } from '@/lib/claude/client'
+import type { StyleProfile } from '@/lib/ai/client'
 
 export default async function SettingsPage({
   searchParams,

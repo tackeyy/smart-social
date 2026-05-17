@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-import { generateDraftCandidates } from '@/lib/claude/client'
+import { generateDraftCandidates } from '@/lib/ai/client'
+import { DRAFT_MODEL_ID } from '@/lib/ai/models'
 import { checkRateLimit } from '@/lib/rate-limit'
 
 const DRAFTS_GENERATE_COOLDOWN_MS = 30 * 1000
@@ -92,7 +93,7 @@ export async function POST(request: Request) {
         source_tweet_text: body.source_tweet_text ?? body.source_tweet_url,
         ai_candidates: candidates.map((text: string) => ({
           text,
-          generated_by: 'claude-sonnet-4-6',
+          generated_by: DRAFT_MODEL_ID,
           created_at: now,
         })),
         selected_index: 0,
