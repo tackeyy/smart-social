@@ -134,7 +134,8 @@ export async function fetchTweetMetrics(
   const data = (await response.json()) as XApiResponse
 
   if (!response.ok) {
-    const message = data.errors?.[0]?.message ?? `X API error: ${response.status}`
+    const message = (data as any).errors?.[0]?.message ?? (data as any).detail ?? (data as any).title ?? `X API error: ${response.status}`
+    console.error('[analytics] X API error:', JSON.stringify({ status: response.status, data }))
     throw new Error(message)
   }
 

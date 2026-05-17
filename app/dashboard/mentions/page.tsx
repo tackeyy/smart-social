@@ -43,8 +43,14 @@ function MentionsContent() {
     try {
       const params = new URLSearchParams({ max_results: '20' })
       if (accountId) params.set('x_account_id', accountId)
-      const res = await fetch(`/smart-social/api/x/mentions?${params}`)
-      const data = (await res.json()) as MentionsResponse
+      const res = await fetch(`/smart-social/api/x/mentions?${params}`, { cache: 'no-store' })
+      const text = await res.text()
+      let data: MentionsResponse
+      try {
+        data = JSON.parse(text) as MentionsResponse
+      } catch {
+        throw new Error(`サーバーエラー (${res.status}): レスポンスが不正です`)
+      }
       if (!res.ok) throw new Error(data.error ?? 'メンションの取得に失敗しました')
       setMentions(data.data ?? [])
       const userMap: Record<string, MentionAuthor> = {}

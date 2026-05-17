@@ -96,12 +96,17 @@ export async function GET(request: Request) {
     const data = await response.json()
 
     if (!response.ok) {
-      const message = data.errors?.[0]?.message ?? `X API error: ${response.status}`
-      console.error('[x/mentions] X API error:', { status: response.status, message })
-      return NextResponse.json({ error: message }, { status: 500 })
+      const message = data.errors?.[0]?.message ?? data.detail ?? data.title ?? `X API error: ${response.status}`
+      console.error('[x/mentions] X API error:', JSON.stringify({ status: response.status, data }))
+      return NextResponse.json({ error: message }, {
+        status: 500,
+        headers: { 'Cache-Control': 'no-store' },
+      })
     }
 
-    return NextResponse.json(data)
+    return NextResponse.json(data, {
+      headers: { 'Cache-Control': 'no-store' },
+    })
   } catch (err) {
     console.error('[x/mentions] fetch error:', err)
     return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 })
