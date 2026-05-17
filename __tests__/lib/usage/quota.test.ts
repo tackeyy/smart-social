@@ -1,17 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { checkMonthlyQuota, checkAiGenerationQuota } from '@/lib/usage/quota'
-
-const makeSupabase = (totalTokens: number) => ({
-  from: vi.fn().mockReturnValue({
-    select: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    gte: vi.fn().mockReturnThis(),
-    then: vi.fn().mockResolvedValue({
-      data: [{ input_tokens: totalTokens, output_tokens: 0 }],
-      error: null,
-    }),
-  }),
-})
+import { checkAiGenerationQuota } from '@/lib/usage/quota'
 
 describe('checkMonthlyQuota', () => {
   const originalEnv = process.env

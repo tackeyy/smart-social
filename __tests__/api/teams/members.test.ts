@@ -18,6 +18,13 @@ vi.mock('@supabase/supabase-js', () => ({
   createClient: vi.fn(),
 }))
 
+vi.mock('@/lib/subscription', () => ({
+  getUserPlan: vi.fn(() => Promise.resolve('business')),
+  getPlanLimits: vi.fn(() => ({ aiGenerationsPerMonth: Infinity, xAccounts: 10, scheduledPostsPerMonth: Infinity, templates: Infinity, autoPlugRules: Infinity, evergreenRules: Infinity, teamMembers: Infinity, analyticsDays: 365 })),
+  canUseFeature: vi.fn(() => true),
+  getMonthlyAiLimit: vi.fn(() => Infinity),
+}))
+
 import { GET, POST } from '@/app/api/teams/[id]/members/route'
 import { PATCH, DELETE } from '@/app/api/teams/[id]/members/[userId]/route'
 import { createClient } from '@/lib/supabase/server'
@@ -69,11 +76,7 @@ describe('GET /api/teams/[id]/members', () => {
       { team_id: 'team-1', user_id: 'user-2', role: 'member' },
     ]
 
-    // fromが2回呼ばれる: 1回目=メンバーシップ確認(single)、2回目=一覧取得
-    const singleMock = vi.fn().mockResolvedValue({ data: { role: 'owner' }, error: null })
-    const eqForListMock = vi.fn().mockResolvedValue({ data: mockMembers, error: null })
-    const eqMembershipMock = vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ single: singleMock }) })
-
+    // fromが複数回呼ばれる: メンバーシップ確認、プラン取得、一覧取得
     let fromCallCount = 0
     mockCreateClient.mockResolvedValue({
       auth: {

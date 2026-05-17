@@ -16,6 +16,13 @@ vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(),
 }))
 
+vi.mock('@/lib/subscription', () => ({
+  getUserPlan: vi.fn(() => Promise.resolve('free')),
+  getPlanLimits: vi.fn(() => ({ aiGenerationsPerMonth: 10, xAccounts: 1, scheduledPostsPerMonth: 5, templates: 3, autoPlugRules: 0, evergreenRules: 0, teamMembers: 1, analyticsDays: 7 })),
+  canUseFeature: vi.fn(() => false),
+  getMonthlyAiLimit: vi.fn(() => 10),
+}))
+
 import { GET, POST } from '@/app/api/accounts/route'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
@@ -316,6 +323,11 @@ describe('POST /api/accounts', () => {
       updated_at: '2024-01-01T00:00:00Z',
     }
 
+    // プラン上限を2に設定（現在0件なので通過）
+    const { getPlanLimits } = await import('@/lib/subscription')
+    vi.mocked(getPlanLimits).mockReturnValue({ aiGenerationsPerMonth: 10, xAccounts: 2, scheduledPostsPerMonth: 5, templates: 3, autoPlugRules: 0, evergreenRules: 0, teamMembers: 1, analyticsDays: 7 })
+
+    let fromCallCount = 0
     mockCreateClient.mockResolvedValue({
       auth: {
         getUser: vi.fn().mockResolvedValue({
@@ -323,10 +335,21 @@ describe('POST /api/accounts', () => {
           error: null,
         }),
       },
-      from: vi.fn().mockReturnValue({
-        insert: vi.fn().mockReturnThis(),
-        select: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data: newAccount, error: null }),
+      from: vi.fn().mockImplementation((table: string) => {
+        fromCallCount++
+        if (table === 'x_accounts' && fromCallCount === 1) {
+          // COUNT チェック: 0件（上限未達）
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockResolvedValue({ count: 0, error: null }),
+          }
+        }
+        // INSERT
+        return {
+          insert: vi.fn().mockReturnThis(),
+          select: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: newAccount, error: null }),
+        }
       }),
     } as any)
 

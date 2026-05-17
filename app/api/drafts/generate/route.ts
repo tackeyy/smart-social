@@ -3,8 +3,9 @@ import { NextResponse } from 'next/server'
 import { generateDraftCandidates } from '@/lib/ai/client'
 import { DRAFT_MODEL_ID } from '@/lib/ai/models'
 import { checkRateLimit } from '@/lib/rate-limit'
-import { checkMonthlyQuota } from '@/lib/usage/quota'
+import { checkAiGenerationQuota } from '@/lib/usage/quota'
 import { logUsage } from '@/lib/usage/logger'
+import { getUserPlan } from '@/lib/subscription'
 
 const DRAFTS_GENERATE_COOLDOWN_MS = 30 * 1000
 
@@ -55,12 +56,13 @@ export async function POST(request: Request) {
     )
   }
 
-  // 月次クォータチェック
-  const quota = await checkMonthlyQuota(supabase, user.id)
+  // プラン取得 → AI生成クォータチェック
+  const plan = await getUserPlan(supabase, user.id)
+  const quota = await checkAiGenerationQuota(supabase, user.id, plan)
   if (!quota.allowed) {
     return NextResponse.json(
-      { error: '月次トークン上限に達しました。翌月まで操作できません。' },
-      { status: 429 }
+      { error: '今月のAI生成回数の上限に達しました', upgrade_required: true, used: quota.used, limit: quota.limit },
+      { status: 402 }
     )
   }
 

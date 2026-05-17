@@ -3,8 +3,8 @@ import { NextResponse } from 'next/server'
 import { generateStyleProfile } from '@/lib/ai/client'
 import { STYLE_PROFILE_MODEL_ID } from '@/lib/ai/models'
 import { checkRateLimit } from '@/lib/rate-limit'
-import { checkMonthlyQuota } from '@/lib/usage/quota'
 import { logUsage } from '@/lib/usage/logger'
+import { getUserPlan, canUseFeature } from '@/lib/subscription'
 
 const X_API_BASE = 'https://api.x.com/2'
 const PROFILE_GENERATE_COOLDOWN_MS = 5 * 60 * 1000
@@ -48,12 +48,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: `再生成は ${remainingSec} 秒後に実行できます` }, { status: 429 })
   }
 
-  // 月次クォータチェック
-  const quota = await checkMonthlyQuota(supabase, user.id)
-  if (!quota.allowed) {
+  // プラン取得 → 文体プロファイル機能チェック
+  const plan = await getUserPlan(supabase, user.id)
+  if (!canUseFeature(plan, 'style-profile')) {
     return NextResponse.json(
-      { error: '月次トークン上限に達しました。翌月まで操作できません。' },
-      { status: 429 }
+      { error: '文体プロファイル生成はProプラン以上でご利用いただけます', upgrade_required: true },
+      { status: 402 }
     )
   }
 

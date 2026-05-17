@@ -29,21 +29,26 @@ vi.mock('@/lib/ai/client', () => ({
 // quota / logger をモック（デフォルトは通過）
 vi.mock('@/lib/usage/quota', () => ({
   checkMonthlyQuota: vi.fn(() => Promise.resolve({ allowed: true, used: 0, limit: 0 })),
+  checkAiGenerationQuota: vi.fn(() => Promise.resolve({ allowed: true, used: 0, limit: 10 })),
 }))
 vi.mock('@/lib/usage/logger', () => ({
   logUsage: vi.fn(() => Promise.resolve()),
+}))
+vi.mock('@/lib/subscription', () => ({
+  getUserPlan: vi.fn(() => Promise.resolve('pro')),
+  canUseFeature: vi.fn(() => true),
+  getPlanLimits: vi.fn(() => ({ aiGenerationsPerMonth: 100, xAccounts: 3, scheduledPostsPerMonth: Infinity, templates: Infinity, autoPlugRules: 3, evergreenRules: 3, teamMembers: 1, analyticsDays: 90 })),
+  getMonthlyAiLimit: vi.fn(() => 100),
 }))
 
 import { POST } from '@/app/api/profile/generate/route'
 import { createClient } from '@/lib/supabase/server'
 import { generateStyleProfile } from '@/lib/ai/client'
-import { checkMonthlyQuota } from '@/lib/usage/quota'
 import { NextResponse } from 'next/server'
 
 const mockCreateClient = vi.mocked(createClient)
 const mockNextResponseJson = vi.mocked(NextResponse.json)
 const mockGenerateStyleProfile = vi.mocked(generateStyleProfile)
-const mockCheckMonthlyQuota = vi.mocked(checkMonthlyQuota)
 
 /**
  * POST /api/profile/generate のテスト
@@ -254,8 +259,9 @@ describe('POST /api/profile/generate', () => {
     )
   })
 
-  it('月次クォータ超過の場合は429を返す', async () => {
-    mockCheckMonthlyQuota.mockResolvedValueOnce({ allowed: false, used: 1000000, limit: 1000000 })
+  it('freeプランの場合は文体プロファイル生成が402を返す', async () => {
+    const { canUseFeature } = await import('@/lib/subscription')
+    vi.mocked(canUseFeature).mockReturnValueOnce(false)
 
     mockCreateClient.mockResolvedValue({
       auth: {
@@ -273,11 +279,6 @@ describe('POST /api/profile/generate', () => {
       }),
     } as any)
 
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ data: [{ id: 't1', text: 'tweet' }] }),
-    })
-
     const request = new Request('http://localhost/api/profile/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -287,8 +288,8 @@ describe('POST /api/profile/generate', () => {
     await POST(request)
 
     expect(mockNextResponseJson).toHaveBeenCalledWith(
-      expect.objectContaining({ error: expect.any(String) }),
-      { status: 429 }
+      expect.objectContaining({ error: expect.any(String), upgrade_required: true }),
+      { status: 402 }
     )
   })
 

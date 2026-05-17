@@ -14,6 +14,13 @@ vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(),
 }))
 
+vi.mock('@/lib/subscription', () => ({
+  getUserPlan: vi.fn(() => Promise.resolve('business')),
+  getPlanLimits: vi.fn(() => ({ aiGenerationsPerMonth: Infinity, xAccounts: 10, scheduledPostsPerMonth: Infinity, templates: Infinity, autoPlugRules: Infinity, evergreenRules: Infinity, teamMembers: 5, analyticsDays: 365 })),
+  canUseFeature: vi.fn(() => true),
+  getMonthlyAiLimit: vi.fn(() => Infinity),
+}))
+
 import { GET, POST } from '@/app/api/evergreen/rules/route'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'

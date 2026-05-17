@@ -29,21 +29,28 @@ vi.mock('@/lib/ai/client', () => ({
 // quota / logger をモック（デフォルトは通過）
 vi.mock('@/lib/usage/quota', () => ({
   checkMonthlyQuota: vi.fn(() => Promise.resolve({ allowed: true, used: 0, limit: 0 })),
+  checkAiGenerationQuota: vi.fn(() => Promise.resolve({ allowed: true, used: 0, limit: 10 })),
 }))
 vi.mock('@/lib/usage/logger', () => ({
   logUsage: vi.fn(() => Promise.resolve()),
+}))
+vi.mock('@/lib/subscription', () => ({
+  getUserPlan: vi.fn(() => Promise.resolve('free')),
+  getPlanLimits: vi.fn(() => ({ aiGenerationsPerMonth: 10, xAccounts: 1, scheduledPostsPerMonth: 5, templates: 3, autoPlugRules: 0, evergreenRules: 0, teamMembers: 1, analyticsDays: 7 })),
+  canUseFeature: vi.fn(() => false),
+  getMonthlyAiLimit: vi.fn(() => 10),
 }))
 
 import { POST } from '@/app/api/drafts/generate/route'
 import { createClient } from '@/lib/supabase/server'
 import { generateDraftCandidates } from '@/lib/ai/client'
-import { checkMonthlyQuota } from '@/lib/usage/quota'
+import { checkAiGenerationQuota } from '@/lib/usage/quota'
 import { NextResponse } from 'next/server'
 
 const mockCreateClient = vi.mocked(createClient)
 const mockNextResponseJson = vi.mocked(NextResponse.json)
 const mockGenerateDraftCandidates = vi.mocked(generateDraftCandidates)
-const mockCheckMonthlyQuota = vi.mocked(checkMonthlyQuota)
+const mockCheckAiGenerationQuota = vi.mocked(checkAiGenerationQuota)
 
 /**
  * POST /api/drafts/generate のテスト
@@ -472,8 +479,8 @@ describe('POST /api/drafts/generate', () => {
     expect(insertArg.source_tweet_id).toMatch(/^\d+$/)
   })
 
-  it('月次クォータ超過の場合は429を返す', async () => {
-    mockCheckMonthlyQuota.mockResolvedValueOnce({ allowed: false, used: 1000000, limit: 1000000 })
+  it('AI生成クォータ超過の場合は402を返す', async () => {
+    mockCheckAiGenerationQuota.mockResolvedValueOnce({ allowed: false, used: 10, limit: 10 })
 
     mockCreateClient.mockResolvedValue({
       auth: {
@@ -500,8 +507,8 @@ describe('POST /api/drafts/generate', () => {
     await POST(request)
 
     expect(mockNextResponseJson).toHaveBeenCalledWith(
-      expect.objectContaining({ error: expect.any(String) }),
-      { status: 429 }
+      expect.objectContaining({ error: expect.any(String), upgrade_required: true }),
+      { status: 402 }
     )
   })
 

@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { getPlanLimits, canUseFeature, getMonthlyAiLimit } from '@/lib/subscription'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { getPlanLimits, canUseFeature, getMonthlyAiLimit, getUserPlan } from '@/lib/subscription'
 
 /**
  * lib/subscription.ts のユニットテスト
@@ -131,5 +131,98 @@ describe('getMonthlyAiLimit', () => {
   it('異常系: 不正なプラン名を渡した場合はエラーをスローする', () => {
     // Arrange & Act & Assert
     expect(() => getMonthlyAiLimit('unknown' as 'free' | 'pro' | 'business')).toThrow()
+  })
+})
+
+/**
+ * getUserPlan のテスト
+ *
+ * 仕様:
+ * - subscriptions テーブルから userId に紐づくアクティブなレコードを取得し Plan を返す
+ * - status が 'active' または 'trialing' のみ有効とみなす
+ * - レコードなし or 無効 status の場合は 'free' にフォールバック
+ */
+describe('getUserPlan', () => {
+  // supabase モックのファクトリ
+  const makeSupabase = (result: { data: unknown; error: unknown }) => ({
+    from: vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue(result),
+    }),
+  })
+
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
+
+  it('active な pro サブスクリプションがある場合は "pro" を返す', async () => {
+    // Arrange
+    const supabase = makeSupabase({
+      data: { plan: 'pro', status: 'active' },
+      error: null,
+    })
+
+    // Act
+    const plan = await getUserPlan(supabase as never, 'user-1')
+
+    // Assert
+    expect(plan).toBe('pro')
+  })
+
+  it('trialing な business サブスクリプションがある場合は "business" を返す', async () => {
+    // Arrange
+    const supabase = makeSupabase({
+      data: { plan: 'business', status: 'trialing' },
+      error: null,
+    })
+
+    // Act
+    const plan = await getUserPlan(supabase as never, 'user-2')
+
+    // Assert
+    expect(plan).toBe('business')
+  })
+
+  it('subscriptions レコードがない場合（.single() が error）は "free" を返す', async () => {
+    // Arrange
+    const supabase = makeSupabase({
+      data: null,
+      error: { code: 'PGRST116', message: 'Row not found' },
+    })
+
+    // Act
+    const plan = await getUserPlan(supabase as never, 'user-3')
+
+    // Assert
+    expect(plan).toBe('free')
+  })
+
+  it('status が "past_due" の場合は "free" を返す（ダウングレード扱い）', async () => {
+    // Arrange
+    const supabase = makeSupabase({
+      data: { plan: 'pro', status: 'past_due' },
+      error: null,
+    })
+
+    // Act
+    const plan = await getUserPlan(supabase as never, 'user-4')
+
+    // Assert
+    expect(plan).toBe('free')
+  })
+
+  it('status が "canceled" の場合は "free" を返す', async () => {
+    // Arrange
+    const supabase = makeSupabase({
+      data: { plan: 'pro', status: 'canceled' },
+      error: null,
+    })
+
+    // Act
+    const plan = await getUserPlan(supabase as never, 'user-5')
+
+    // Assert
+    expect(plan).toBe('free')
   })
 })
