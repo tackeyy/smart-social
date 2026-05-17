@@ -77,13 +77,15 @@ STRIPE_BUSINESS_YEARLY_PRICE_ID=price_...
 
 ## 実装ステータス
 
-- [ ] `npm install stripe @stripe/stripe-js` 追加
-- [ ] マイグレーション：subscriptionsテーブル作成
-- [ ] `app/api/stripe/checkout/route.ts`
-- [ ] `app/api/stripe/portal/route.ts`
-- [ ] `app/api/stripe/webhooks/route.ts`
-- [ ] プラン制限チェックのユーティリティ関数（`lib/subscription.ts`）
-- [ ] Stripe Dashboardでプロダクト・価格設定
+- [x] `npm install stripe @stripe/stripe-js` 追加
+- [x] マイグレーション：subscriptionsテーブル作成（`supabase/migrations/20260519000002_create_subscriptions.sql`）
+- [x] `app/api/stripe/checkout/route.ts`
+- [x] `app/api/stripe/portal/route.ts`
+- [x] `app/api/stripe/webhooks/route.ts`
+- [x] プラン制限チェックのユーティリティ関数（`lib/subscription.ts`）
+- [x] `lib/stripe.ts`（遅延初期化Proxyパターン）
+- [x] `types/subscription.ts`（Plan/Feature/PlanLimits型定義）
+- [ ] Stripe Dashboardでプロダクト・価格設定（キー取得後に実施）
 - [ ] 環境変数設定（.env.local + Vercel）
 
 ## 修正履歴
