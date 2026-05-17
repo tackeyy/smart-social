@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server'
 import { generateDraftCandidates } from '@/lib/ai/client'
 import { DRAFT_MODEL_ID } from '@/lib/ai/models'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { checkMonthlyQuota } from '@/lib/usage/quota'
+import { logUsage } from '@/lib/usage/logger'
 
 const DRAFTS_GENERATE_COOLDOWN_MS = 30 * 1000
 
@@ -53,6 +55,15 @@ export async function POST(request: Request) {
     )
   }
 
+  // 月次クォータチェック
+  const quota = await checkMonthlyQuota(supabase, user.id)
+  if (!quota.allowed) {
+    return NextResponse.json(
+      { error: '月次トークン上限に達しました。翌月まで操作できません。' },
+      { status: 429 }
+    )
+  }
+
   // style_profiles から最新プロファイル取得
   const { data: styleProfile, error: profileError } = await supabase
     .from('style_profiles')
@@ -72,7 +83,7 @@ export async function POST(request: Request) {
   // lib/ai/client.ts の関数で3候補生成
   try {
     const { tone, emoji_usage, avg_length, patterns, sample_phrases } = styleProfile.profile_data ?? styleProfile
-    const candidates = await generateDraftCandidates(
+    const { candidates, usage } = await generateDraftCandidates(
       body.source_tweet_text ?? body.source_tweet_url,
       { tone, emoji_usage, avg_length, patterns, sample_phrases },
       body.instruction
@@ -88,7 +99,7 @@ export async function POST(request: Request) {
         user_id: user.id,
         x_account_id: body.x_account_id,
         type: 'reply',
-        content: candidates[0],  // デフォルトは候補0番
+        content: candidates[0],
         source_tweet_id,
         source_tweet_text: body.source_tweet_text ?? body.source_tweet_url,
         ai_candidates: candidates.map((text: string) => ({
@@ -105,6 +116,13 @@ export async function POST(request: Request) {
     if (insertError) {
       return NextResponse.json({ error: insertError.message }, { status: 500 })
     }
+
+    await logUsage(supabase, user.id, {
+      endpoint: 'drafts_generate',
+      model: 'claude-sonnet-4-6',
+      input_tokens: usage.input_tokens,
+      output_tokens: usage.output_tokens,
+    })
 
     // レスポンスは配列形式を維持して後方互換性を保つ
     return NextResponse.json({ drafts: insertedDraft ? [insertedDraft] : [] })

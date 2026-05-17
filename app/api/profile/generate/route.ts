@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server'
 import { generateStyleProfile } from '@/lib/ai/client'
 import { STYLE_PROFILE_MODEL_ID } from '@/lib/ai/models'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { checkMonthlyQuota } from '@/lib/usage/quota'
+import { logUsage } from '@/lib/usage/logger'
 
 const X_API_BASE = 'https://api.x.com/2'
 const PROFILE_GENERATE_COOLDOWN_MS = 5 * 60 * 1000
@@ -46,6 +48,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: `再生成は ${remainingSec} 秒後に実行できます` }, { status: 429 })
   }
 
+  // 月次クォータチェック
+  const quota = await checkMonthlyQuota(supabase, user.id)
+  if (!quota.allowed) {
+    return NextResponse.json(
+      { error: '月次トークン上限に達しました。翌月まで操作できません。' },
+      { status: 429 }
+    )
+  }
+
   const bearerToken = process.env.X_BEARER_TOKEN
   if (!bearerToken) {
     return NextResponse.json({ error: 'X_BEARER_TOKEN が設定されていません' }, { status: 500 })
@@ -70,13 +81,13 @@ export async function POST(request: Request) {
 
   // lib/ai/client.ts の関数でプロファイル生成
   try {
-    const profileData = await generateStyleProfile(tweets.map(t => t.text))
+    const { profile, usage } = await generateStyleProfile(tweets.map(t => t.text))
 
     // style_profiles に保存
     const { error: upsertError } = await supabase
       .from('style_profiles')
       .upsert(
-        { x_account_id: body.x_account_id, profile_data: profileData, model_version: STYLE_PROFILE_MODEL_ID, analyzed_at: new Date().toISOString() },
+        { x_account_id: body.x_account_id, profile_data: profile, model_version: STYLE_PROFILE_MODEL_ID, analyzed_at: new Date().toISOString() },
         { onConflict: 'x_account_id' }
       )
 
@@ -85,7 +96,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'プロファイルの保存に失敗しました' }, { status: 500 })
     }
 
-    return NextResponse.json({ profile: profileData })
+    await logUsage(supabase, user.id, {
+      endpoint: 'profile_generate',
+      model: 'claude-sonnet-4-6',
+      input_tokens: usage.input_tokens,
+      output_tokens: usage.output_tokens,
+    })
+
+    return NextResponse.json({ profile })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to generate profile'
     return NextResponse.json({ error: message }, { status: 500 })

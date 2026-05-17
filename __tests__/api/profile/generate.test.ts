@@ -26,14 +26,24 @@ vi.mock('@/lib/ai/client', () => ({
   generateDraftCandidates: vi.fn(),
 }))
 
+// quota / logger をモック（デフォルトは通過）
+vi.mock('@/lib/usage/quota', () => ({
+  checkMonthlyQuota: vi.fn(() => Promise.resolve({ allowed: true, used: 0, limit: 0 })),
+}))
+vi.mock('@/lib/usage/logger', () => ({
+  logUsage: vi.fn(() => Promise.resolve()),
+}))
+
 import { POST } from '@/app/api/profile/generate/route'
 import { createClient } from '@/lib/supabase/server'
 import { generateStyleProfile } from '@/lib/ai/client'
+import { checkMonthlyQuota } from '@/lib/usage/quota'
 import { NextResponse } from 'next/server'
 
 const mockCreateClient = vi.mocked(createClient)
 const mockNextResponseJson = vi.mocked(NextResponse.json)
 const mockGenerateStyleProfile = vi.mocked(generateStyleProfile)
+const mockCheckMonthlyQuota = vi.mocked(checkMonthlyQuota)
 
 /**
  * POST /api/profile/generate のテスト
@@ -146,8 +156,8 @@ describe('POST /api/profile/generate', () => {
       json: async () => ({ data: mockTweets }),
     })
 
-    // lib/claude/client の generateStyleProfile をモック
-    mockGenerateStyleProfile.mockResolvedValue(mockProfile as any)
+    // lib/ai/client の generateStyleProfile をモック（新形式: { profile, usage }）
+    mockGenerateStyleProfile.mockResolvedValue({ profile: mockProfile as any, usage: { input_tokens: 200, output_tokens: 100 } })
 
     mockCreateClient.mockResolvedValue({
       auth: {
@@ -241,6 +251,44 @@ describe('POST /api/profile/generate', () => {
     expect(mockNextResponseJson).toHaveBeenCalledWith(
       expect.objectContaining({ error: expect.any(String) }),
       { status: 500 }
+    )
+  })
+
+  it('月次クォータ超過の場合は429を返す', async () => {
+    mockCheckMonthlyQuota.mockResolvedValueOnce({ allowed: false, used: 1000000, limit: 1000000 })
+
+    mockCreateClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null }),
+      },
+      from: vi.fn().mockImplementation((table: string) => {
+        if (table === 'x_accounts') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({ data: { id: 'account-1', user_id: 'user-1', x_user_id: 'x-1', access_token: 'tok' }, error: null }),
+          }
+        }
+        return { from: vi.fn() }
+      }),
+    } as any)
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: [{ id: 't1', text: 'tweet' }] }),
+    })
+
+    const request = new Request('http://localhost/api/profile/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ x_account_id: 'account-1' }),
+    })
+
+    await POST(request)
+
+    expect(mockNextResponseJson).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.any(String) }),
+      { status: 429 }
     )
   })
 

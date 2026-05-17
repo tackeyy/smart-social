@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { runPrecheck } from '@/lib/precheck/engine'
 import type { TemplateChannel } from '@/lib/precheck/engine'
+import { checkMonthlyQuota } from '@/lib/usage/quota'
+import { logUsage } from '@/lib/usage/logger'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -20,6 +22,24 @@ export async function POST(request: Request) {
     ? (channel as TemplateChannel)
     : 'post'
 
-  const result = await runPrecheck(text, safeChannel)
+  const quota = await checkMonthlyQuota(supabase, user.id)
+  if (!quota.allowed) {
+    return NextResponse.json(
+      { error: '月次トークン上限に達しました。翌月まで操作できません。' },
+      { status: 429 }
+    )
+  }
+
+  const { result, usage } = await runPrecheck(text, safeChannel)
+
+  if (usage) {
+    await logUsage(supabase, user.id, {
+      endpoint: 'precheck',
+      model: 'claude-haiku-4-5-20251001',
+      input_tokens: usage.input_tokens,
+      output_tokens: usage.output_tokens,
+    })
+  }
+
   return NextResponse.json(result)
 }

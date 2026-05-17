@@ -26,14 +26,24 @@ vi.mock('@/lib/ai/client', () => ({
   generateDraftCandidates: vi.fn(),
 }))
 
+// quota / logger をモック（デフォルトは通過）
+vi.mock('@/lib/usage/quota', () => ({
+  checkMonthlyQuota: vi.fn(() => Promise.resolve({ allowed: true, used: 0, limit: 0 })),
+}))
+vi.mock('@/lib/usage/logger', () => ({
+  logUsage: vi.fn(() => Promise.resolve()),
+}))
+
 import { POST } from '@/app/api/drafts/generate/route'
 import { createClient } from '@/lib/supabase/server'
 import { generateDraftCandidates } from '@/lib/ai/client'
+import { checkMonthlyQuota } from '@/lib/usage/quota'
 import { NextResponse } from 'next/server'
 
 const mockCreateClient = vi.mocked(createClient)
 const mockNextResponseJson = vi.mocked(NextResponse.json)
 const mockGenerateDraftCandidates = vi.mocked(generateDraftCandidates)
+const mockCheckMonthlyQuota = vi.mocked(checkMonthlyQuota)
 
 /**
  * POST /api/drafts/generate のテスト
@@ -156,7 +166,7 @@ describe('POST /api/drafts/generate', () => {
     ]
 
     // generateDraftCandidates が3候補を返す
-    mockGenerateDraftCandidates.mockResolvedValue(mockDraftCandidates)
+    mockGenerateDraftCandidates.mockResolvedValue({ candidates: mockDraftCandidates, usage: { input_tokens: 100, output_tokens: 50 } })
 
     // 1レコードにまとめた INSERT 結果
     const mockInsertedDraft = {
@@ -254,7 +264,7 @@ describe('POST /api/drafts/generate', () => {
       status: 'pending',
     }
 
-    mockGenerateDraftCandidates.mockResolvedValue(['候補1', '候補2', '候補3'])
+    mockGenerateDraftCandidates.mockResolvedValue({ candidates: ['候補1', '候補2', '候補3'], usage: { input_tokens: 100, output_tokens: 50 } })
 
     mockCreateClient.mockResolvedValue({
       auth: {
@@ -337,6 +347,7 @@ describe('POST /api/drafts/generate', () => {
     // generateDraftCandidates がエラーをスロー
     mockGenerateDraftCandidates.mockRejectedValue(new Error('Claude API internal error'))
 
+
     mockCreateClient.mockResolvedValue({
       auth: {
         getUser: vi.fn().mockResolvedValue({
@@ -395,7 +406,7 @@ describe('POST /api/drafts/generate', () => {
       profile_data: { tone: 'casual' },
     }
 
-    mockGenerateDraftCandidates.mockResolvedValue(['候補1', '候補2', '候補3'])
+    mockGenerateDraftCandidates.mockResolvedValue({ candidates: ['候補1', '候補2', '候補3'], usage: { input_tokens: 100, output_tokens: 50 } })
 
     const mockInsert = vi.fn().mockReturnValue({
       select: vi.fn().mockReturnThis(),
@@ -459,6 +470,39 @@ describe('POST /api/drafts/generate', () => {
     expect(insertArg.source_tweet_id).not.toContain('?')
     expect(insertArg.source_tweet_id).not.toContain('#')
     expect(insertArg.source_tweet_id).toMatch(/^\d+$/)
+  })
+
+  it('月次クォータ超過の場合は429を返す', async () => {
+    mockCheckMonthlyQuota.mockResolvedValueOnce({ allowed: false, used: 1000000, limit: 1000000 })
+
+    mockCreateClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null }),
+      },
+      from: vi.fn().mockImplementation((table: string) => {
+        if (table === 'x_accounts') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({ data: { id: 'account-1', user_id: 'user-1' }, error: null }),
+          }
+        }
+        return { from: vi.fn() }
+      }),
+    } as any)
+
+    const request = new Request('http://localhost/api/drafts/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ x_account_id: 'account-1', source_tweet_url: 'https://x.com/i/status/123' }),
+    })
+
+    await POST(request)
+
+    expect(mockNextResponseJson).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.any(String) }),
+      { status: 429 }
+    )
   })
 
   it('異常系: リクエストボディが不正な場合は400を返す', async () => {
