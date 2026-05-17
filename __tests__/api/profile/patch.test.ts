@@ -55,7 +55,7 @@ describe('PATCH /api/profile', () => {
     const request = new Request('http://localhost/api/profile', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ x_account_id: 'account-1', tone: '丁寧でフレンドリー' }),
+      body: JSON.stringify({ x_account_id: 1, tone: '丁寧でフレンドリー' }),
     })
 
     // Act
@@ -92,7 +92,7 @@ describe('PATCH /api/profile', () => {
     const request = new Request('http://localhost/api/profile', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ x_account_id: 'account-other-user', tone: '丁寧でフレンドリー' }),
+      body: JSON.stringify({ x_account_id: 999, tone: '丁寧でフレンドリー' }),
     })
 
     // Act
@@ -152,7 +152,7 @@ describe('PATCH /api/profile', () => {
     const request = new Request('http://localhost/api/profile', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ x_account_id: 'account-1', tone: '' }), // tone が空文字
+      body: JSON.stringify({ x_account_id: 1, tone: '' }), // tone が空文字
     })
 
     // Act
@@ -180,7 +180,7 @@ describe('PATCH /api/profile', () => {
     const request = new Request('http://localhost/api/profile', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ x_account_id: 'account-1', tone: '丁寧でフレンドリー', avg_length: -1 }),
+      body: JSON.stringify({ x_account_id: 1, tone: '丁寧でフレンドリー', avg_length: -1 }),
     })
 
     // Act
@@ -208,7 +208,7 @@ describe('PATCH /api/profile', () => {
     const request = new Request('http://localhost/api/profile', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ x_account_id: 'account-1', tone: '丁寧でフレンドリー', patterns: [1, 2, 3] }),
+      body: JSON.stringify({ x_account_id: 1, tone: '丁寧でフレンドリー', patterns: [1, 2, 3] }),
     })
 
     // Act
@@ -236,7 +236,7 @@ describe('PATCH /api/profile', () => {
     const request = new Request('http://localhost/api/profile', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ x_account_id: 'account-1', tone: '丁寧でフレンドリー', patterns: 'not-an-array' }),
+      body: JSON.stringify({ x_account_id: 1, tone: '丁寧でフレンドリー', patterns: 'not-an-array' }),
     })
 
     // Act
@@ -266,7 +266,7 @@ describe('PATCH /api/profile', () => {
     const request = new Request('http://localhost/api/profile', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ x_account_id: 'account-1', tone: longTone }),
+      body: JSON.stringify({ x_account_id: 1, tone: longTone }),
     })
 
     // Act
@@ -294,7 +294,7 @@ describe('PATCH /api/profile', () => {
     const request = new Request('http://localhost/api/profile', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ x_account_id: 'account-1', tone: '丁寧でフレンドリー', sample_phrases: [1, 2] }),
+      body: JSON.stringify({ x_account_id: 1, tone: '丁寧でフレンドリー', sample_phrases: [1, 2] }),
     })
 
     // Act
@@ -322,7 +322,7 @@ describe('PATCH /api/profile', () => {
     const request = new Request('http://localhost/api/profile', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ x_account_id: 'account-1', tone: '丁寧でフレンドリー', emoji_usage: 42 }),
+      body: JSON.stringify({ x_account_id: 1, tone: '丁寧でフレンドリー', emoji_usage: 42 }),
     })
 
     // Act
@@ -350,7 +350,7 @@ describe('PATCH /api/profile', () => {
     const request = new Request('http://localhost/api/profile', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ x_account_id: 'account-1', tone: '丁寧でフレンドリー', avg_length: 10001 }),
+      body: JSON.stringify({ x_account_id: 1, tone: '丁寧でフレンドリー', avg_length: 10001 }),
     })
 
     // Act
@@ -378,7 +378,7 @@ describe('PATCH /api/profile', () => {
     const request = new Request('http://localhost/api/profile', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ x_account_id: 'account-1', tone: '丁寧でフレンドリー', avg_length: 3.5 }),
+      body: JSON.stringify({ x_account_id: 1, tone: '丁寧でフレンドリー', avg_length: 3.5 }),
     })
 
     // Act
@@ -403,7 +403,7 @@ describe('PATCH /api/profile', () => {
     }
 
     const updatedProfile = {
-      x_account_id: 'account-1',
+      x_account_id: 1,
       profile_data: {
         tone: '丁寧でフレンドリー',
         avg_length: 100,
@@ -441,7 +441,7 @@ describe('PATCH /api/profile', () => {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        x_account_id: 'account-1',
+        x_account_id: 1,
         tone: '丁寧でフレンドリー',
         avg_length: 100,
       }),
@@ -496,7 +496,7 @@ describe('PATCH /api/profile', () => {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        x_account_id: 'account-1',
+        x_account_id: 1,
         tone: '丁寧でフレンドリー',
       }),
     })

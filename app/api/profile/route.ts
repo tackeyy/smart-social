@@ -27,6 +27,10 @@ export async function PATCH(request: Request) {
   if (!body.x_account_id) {
     return NextResponse.json({ error: 'アカウントIDは必須です' }, { status: 400 })
   }
+  const xAccountId = parseInt(String(body.x_account_id), 10)
+  if (isNaN(xAccountId) || xAccountId <= 0) {
+    return NextResponse.json({ error: 'アカウントIDは正の整数で指定してください' }, { status: 400 })
+  }
 
   if (!body.tone || typeof body.tone !== 'string' || body.tone.trim() === '') {
     return NextResponse.json({ error: 'toneは必須です' }, { status: 400 })
@@ -37,8 +41,8 @@ export async function PATCH(request: Request) {
   }
 
   if (body.emoji_usage !== undefined) {
-    if (typeof body.emoji_usage !== 'string') {
-      return NextResponse.json({ error: 'emoji_usageは文字列で指定してください' }, { status: 400 })
+    if (typeof body.emoji_usage !== 'string' || body.emoji_usage.length > 500) {
+      return NextResponse.json({ error: 'emoji_usageは500文字以内の文字列で指定してください' }, { status: 400 })
     }
   }
 
@@ -48,15 +52,26 @@ export async function PATCH(request: Request) {
     }
   }
 
+  const MAX_ARRAY_ITEMS = 50
+  const MAX_ITEM_LENGTH = 500
+
   if (body.patterns !== undefined) {
-    if (!Array.isArray(body.patterns) || body.patterns.some((p: unknown) => typeof p !== 'string')) {
-      return NextResponse.json({ error: 'patternsは文字列の配列で指定してください' }, { status: 400 })
+    if (
+      !Array.isArray(body.patterns) ||
+      body.patterns.length > MAX_ARRAY_ITEMS ||
+      body.patterns.some((p: unknown) => typeof p !== 'string' || (p as string).length > MAX_ITEM_LENGTH)
+    ) {
+      return NextResponse.json({ error: 'patternsは50件以内・各500文字以内の文字列配列で指定してください' }, { status: 400 })
     }
   }
 
   if (body.sample_phrases !== undefined) {
-    if (!Array.isArray(body.sample_phrases) || body.sample_phrases.some((p: unknown) => typeof p !== 'string')) {
-      return NextResponse.json({ error: 'sample_phrasesは文字列の配列で指定してください' }, { status: 400 })
+    if (
+      !Array.isArray(body.sample_phrases) ||
+      body.sample_phrases.length > MAX_ARRAY_ITEMS ||
+      body.sample_phrases.some((p: unknown) => typeof p !== 'string' || (p as string).length > MAX_ITEM_LENGTH)
+    ) {
+      return NextResponse.json({ error: 'sample_phrasesは50件以内・各500文字以内の文字列配列で指定してください' }, { status: 400 })
     }
   }
 
@@ -64,7 +79,7 @@ export async function PATCH(request: Request) {
   const { data: account, error: accountError } = await supabase
     .from('x_accounts')
     .select('id, user_id')
-    .eq('id', body.x_account_id)
+    .eq('id', xAccountId)
     .eq('user_id', user.id)
     .single()
 
@@ -93,7 +108,7 @@ export async function PATCH(request: Request) {
   const { data: updated, error: updateError } = await supabase
     .from('style_profiles')
     .update({ profile_data: profileUpdate })
-    .eq('x_account_id', body.x_account_id)
+    .eq('x_account_id', xAccountId)
     .select()
     .single()
 
@@ -102,7 +117,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'プロファイルが見つかりません。先にプロファイルを生成してください' }, { status: 404 })
     }
     console.error('[profile] update error:', updateError)
-    return NextResponse.json({ error: 'プロファイルの更新に失敗しました: ' + updateError.message }, { status: 500 })
+    return NextResponse.json({ error: 'プロファイルの更新に失敗しました' }, { status: 500 })
   }
 
   return NextResponse.json({ profile: updated.profile_data }, { status: 200 })

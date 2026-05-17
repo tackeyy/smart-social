@@ -81,7 +81,7 @@ export async function POST(request: Request) {
 
     if (upsertError) {
       console.error('[profile/generate] upsert error:', upsertError)
-      return NextResponse.json({ error: 'プロファイルの保存に失敗しました: ' + upsertError.message }, { status: 500 })
+      return NextResponse.json({ error: 'プロファイルの保存に失敗しました' }, { status: 500 })
     }
 
     return NextResponse.json({ profile: profileData })
