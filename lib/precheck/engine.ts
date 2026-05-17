@@ -1,4 +1,5 @@
-import Anthropic from '@anthropic-ai/sdk'
+import { generateText } from 'ai'
+import { PRECHECK_MODEL } from '@/lib/ai/models'
 
 export type PrecheckDecision = 'auto_pass' | 'manual_review' | 'blocked'
 export type TemplateChannel = 'post' | 'reply' | 'dm'
@@ -69,22 +70,13 @@ export async function runPrecheck(
     }
   }
 
-  const client = new Anthropic()
-
   try {
-    const message = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 512,
+    const { text: rawText } = await generateText({
+      model: PRECHECK_MODEL,
       system: SYSTEM_PROMPT,
-      messages: [
-        {
-          role: 'user',
-          content: `以下の${channel}投稿を審査してください:\n\n${text}`,
-        },
-      ],
+      prompt: `以下の${channel}投稿を審査してください:\n\n${text}`,
+      maxOutputTokens: 512,
     })
-
-    const rawText = message.content[0].type === 'text' ? message.content[0].text : ''
 
     const jsonMatch = rawText.match(/\{[\s\S]*\}/)
     if (!jsonMatch) throw new Error('JSON not found in response')
