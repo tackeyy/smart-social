@@ -68,7 +68,7 @@ export async function POST(request: Request) {
   const xData = await xResponse.json()
   const tweets: Array<{ id: string; text: string }> = xData.data ?? []
 
-  // lib/claude/client.ts の関数でプロファイル生成
+  // lib/ai/client.ts の関数でプロファイル生成
   try {
     const profileData = await generateStyleProfile(tweets.map(t => t.text))
 

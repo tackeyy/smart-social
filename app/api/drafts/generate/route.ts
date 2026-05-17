@@ -69,7 +69,7 @@ export async function POST(request: Request) {
     )
   }
 
-  // lib/claude/client.ts の関数で3候補生成
+  // lib/ai/client.ts の関数で3候補生成
   try {
     const { tone, emoji_usage, avg_length, patterns, sample_phrases } = styleProfile.profile_data ?? styleProfile
     const candidates = await generateDraftCandidates(
