@@ -14,6 +14,7 @@ const navLinks = [
   { href: '/dashboard/analytics', label: '分析' },
   { href: '/dashboard/accounts', label: 'アカウント' },
   { href: '/dashboard/usage', label: '使用量' },
+  { href: '/dashboard/billing', label: 'プラン' },
   { href: '/dashboard/settings', label: '設定' },
 ]
 

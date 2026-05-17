@@ -3,7 +3,9 @@ import { createClient } from '@/lib/supabase/server'
 import { Toaster } from '@/components/ui/sonner'
 import { AccountSelector } from '@/components/AccountSelector'
 import { NavBar } from '@/components/NavBar'
+import { PlanBadge } from '@/components/billing/PlanBadge'
 import type { XAccount } from '@/types/app'
+import type { Plan } from '@/types/subscription'
 
 export default async function DashboardLayout({
   children,
@@ -31,6 +33,14 @@ export default async function DashboardLayout({
 
   const currentAccount = xAccounts[0]
 
+  const { data: subscription } = await supabase
+    .from('subscriptions')
+    .select('plan')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  const currentPlan: Plan = (subscription?.plan as Plan) ?? 'free'
+
   return (
     <div className="min-h-screen bg-manavi-bg">
       <NavBar
@@ -40,6 +50,7 @@ export default async function DashboardLayout({
               accounts={xAccounts}
               currentAccountId={currentAccount.id}
             />
+            <PlanBadge plan={currentPlan} />
             <span className="text-xs text-white/40 truncate max-w-[180px]">
               {user.email}
             </span>
