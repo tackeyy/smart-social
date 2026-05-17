@@ -23,6 +23,20 @@ bash scripts/deploy.sh prod
 - マイグレーションは Management API 経由で適用（DBパスワード不要）
 - 適用済みのマイグレーションは自動スキップ
 
+## 公開URLとルーティング確認
+
+- アプリ本体の本番デプロイ先は Vercel project `smart-sns`
+- 公開URL `https://gyomu.ai/smart-social` は Cloudflare Worker route `gyomu.ai/smart-social*` で Vercel の `https://smart-sns.vercel.app/smart-social` にプロキシする
+- Worker設定はこのリポジトリの `cloudflare/` 配下で管理する
+  - `cloudflare/smart-social-proxy.js`
+  - `cloudflare/wrangler-proxy.toml`
+- `gyomu.ai/smart-social` が404の場合は、別リポジトリを触る前に以下を確認する
+  1. Vercel production deployment が Ready か: `vercel ls smart-sns --scope team_SIcCzRiiLuONtecnrwb2FpXf`
+  2. Vercel直URLが200か: `curl -L https://smart-sns.vercel.app/smart-social`
+  3. Cloudflare Worker route が反映済みか: `wrangler deployments list --name gyomu-smart-social-proxy`
+  4. 公開URLが200か: `curl -L https://gyomu.ai/smart-social`
+- ルーティング修正は原則として `smart-social` リポジトリ内の `cloudflare/` を使う。`smart-outreach` など別リポジトリへ作業範囲を広げる前に、必ず対象が本当にそのリポジトリで管理されているか確認する
+
 ## Git コミットルール
 
 - issue を解決するコミットには必ず **`closes #N`** または **`fixes #N`** をコミットメッセージ本文に含める
