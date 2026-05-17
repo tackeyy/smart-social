@@ -19,6 +19,9 @@ vi.mock('@/lib/supabase/server', () => ({
 // lib/stripe をモック
 vi.mock('@/lib/stripe', () => ({
   stripe: {
+    customers: {
+      create: vi.fn(),
+    },
     checkout: {
       sessions: {
         create: vi.fn(),
@@ -35,6 +38,7 @@ import { NextResponse } from 'next/server'
 const mockCreateClient = vi.mocked(createClient)
 const mockNextResponseJson = vi.mocked(NextResponse.json)
 const mockStripeCheckoutCreate = vi.mocked(stripe.checkout.sessions.create)
+const mockStripeCustomersCreate = vi.mocked(stripe.customers.create)
 
 /**
  * POST /api/stripe/checkout のテスト
@@ -57,6 +61,8 @@ describe('POST /api/stripe/checkout', () => {
     process.env.STRIPE_PRO_YEARLY_PRICE_ID = 'price_pro_yearly_test'
     process.env.STRIPE_BUSINESS_MONTHLY_PRICE_ID = 'price_business_monthly_test'
     process.env.STRIPE_BUSINESS_YEARLY_PRICE_ID = 'price_business_yearly_test'
+    // Stripe 顧客作成のデフォルトモック
+    mockStripeCustomersCreate.mockResolvedValue({ id: 'cus_test_new' } as any)
   })
 
   it('未認証の場合は401を返す', async () => {
@@ -330,6 +336,89 @@ describe('POST /api/stripe/checkout', () => {
     expect(mockNextResponseJson).toHaveBeenCalledWith(
       expect.objectContaining({ error: expect.any(String) }),
       { status: 500 }
+    )
+  })
+
+  it('DB にカスタマーIDが存在する場合は新規顧客作成をスキップして既存IDを使う', async () => {
+    // Arrange
+    const mockSessionUrl = 'https://checkout.stripe.com/pay/cs_test_existing'
+    mockStripeCheckoutCreate.mockResolvedValue({ url: mockSessionUrl, id: 'cs_test_existing' } as any)
+
+    const mockFrom = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: { stripe_customer_id: 'cus_existing_123' },
+            error: null,
+          }),
+        }),
+      }),
+    })
+    mockCreateClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'test@example.com' } },
+          error: null,
+        }),
+      },
+      from: mockFrom,
+    } as any)
+
+    const request = new Request('http://localhost/api/stripe/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan: 'pro' }),
+    })
+
+    // Act
+    await POST(request)
+
+    // Assert: 既存 customer ID を使うので新規作成はしない
+    expect(mockStripeCustomersCreate).not.toHaveBeenCalled()
+    expect(mockStripeCheckoutCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ customer: 'cus_existing_123' }),
+      expect.anything()
+    )
+    expect(mockNextResponseJson).toHaveBeenCalledWith(
+      expect.objectContaining({ url: mockSessionUrl }),
+      expect.objectContaining({ status: 200 })
+    )
+  })
+
+  it('billing=yearly を指定した場合は年額 Price ID を使う', async () => {
+    // Arrange
+    const mockSessionUrl = 'https://checkout.stripe.com/pay/cs_test_yearly'
+    mockStripeCheckoutCreate.mockResolvedValue({ url: mockSessionUrl, id: 'cs_test_yearly' } as any)
+
+    mockCreateClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'test@example.com' } },
+          error: null,
+        }),
+      },
+      from: vi.fn(),
+    } as any)
+
+    const request = new Request('http://localhost/api/stripe/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan: 'pro', billing: 'yearly' }),
+    })
+
+    // Act
+    await POST(request)
+
+    // Assert: 年額 Price ID が line_items に設定されている
+    expect(mockStripeCheckoutCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        line_items: [{ price: 'price_pro_yearly_test', quantity: 1 }],
+      }),
+      expect.anything()
+    )
+    expect(mockNextResponseJson).toHaveBeenCalledWith(
+      expect.objectContaining({ url: mockSessionUrl }),
+      expect.objectContaining({ status: 200 })
     )
   })
 })
