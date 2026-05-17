@@ -40,47 +40,88 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
   }
 
-  const body = await request.json()
-
-  // x_account_id がログインユーザーのものか確認してから INSERT
-  const { data: account } = await supabase
-    .from('x_accounts')
-    .select('id')
-    .eq('id', body.x_account_id)
-    .eq('user_id', user.id)
-    .single()
-
-  if (!account) {
-    return NextResponse.json({ error: 'アクセス権限がありません' }, { status: 403 })
+  let body: Record<string, unknown>
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'リクエストの形式が不正です' }, { status: 400 })
   }
 
-  if (!body.source_tweet_id || !body.source_tweet_text) {
-    return NextResponse.json(
-      { error: 'source_tweet_id と source_tweet_text は必須です' },
-      { status: 400 }
-    )
+  const type = (body.type as string) === 'reply' ? 'reply' : 'post'
+
+  // x_account_id の所有確認（未指定の場合はユーザーの先頭アカウントを使用）
+  let xAccountId = body.x_account_id as string | undefined
+  if (xAccountId) {
+    const { data: account } = await supabase
+      .from('x_accounts')
+      .select('id')
+      .eq('id', xAccountId)
+      .eq('user_id', user.id)
+      .single()
+    if (!account) {
+      return NextResponse.json({ error: 'アクセス権限がありません' }, { status: 403 })
+    }
+  } else {
+    const { data: account } = await supabase
+      .from('x_accounts')
+      .select('id')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .single()
+    if (!account) {
+      return NextResponse.json({ error: 'X account not connected' }, { status: 404 })
+    }
+    xAccountId = account.id
   }
 
-  // 3候補を ai_candidates JSONB 配列に格納し、1レコードで管理
+  if (type === 'reply') {
+    if (!body.source_tweet_id || !body.source_tweet_text) {
+      return NextResponse.json(
+        { error: 'source_tweet_id と source_tweet_text は必須です' },
+        { status: 400 }
+      )
+    }
+    const { data, error } = await supabase
+      .from('drafts')
+      .insert({
+        user_id: user.id,
+        x_account_id: xAccountId,
+        type: 'reply',
+        content: '',
+        source_tweet_id: body.source_tweet_id,
+        source_tweet_text: body.source_tweet_text,
+        ai_candidates: body.draft_candidates ?? [],
+        status: 'pending',
+      })
+      .select()
+      .single()
+    if (error) {
+      console.error('[drafts/route] insert error:', error)
+      return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 })
+    }
+    return NextResponse.json(data, { status: 201 })
+  }
+
+  // type === 'post'（スケジュール投稿など通常投稿用）
+  const content = typeof body.content === 'string' ? body.content.trim() : ''
+  if (!content) {
+    return NextResponse.json({ error: 'content は必須です' }, { status: 400 })
+  }
   const { data, error } = await supabase
     .from('drafts')
     .insert({
       user_id: user.id,
-      x_account_id: body.x_account_id,
-      type: 'reply',
-      content: '',  // 候補選択時に更新
-      source_tweet_id: body.source_tweet_id,
-      source_tweet_text: body.source_tweet_text,
-      ai_candidates: body.draft_candidates ?? [],
+      x_account_id: xAccountId,
+      type: 'post',
+      content,
       status: 'pending',
     })
     .select()
     .single()
-
   if (error) {
     console.error('[drafts/route] insert error:', error)
     return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 })
   }
-
   return NextResponse.json(data, { status: 201 })
 }
