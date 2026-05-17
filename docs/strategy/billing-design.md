@@ -85,8 +85,8 @@ STRIPE_BUSINESS_YEARLY_PRICE_ID=price_...
 - [x] プラン制限チェックのユーティリティ関数（`lib/subscription.ts`）
 - [x] `lib/stripe.ts`（遅延初期化Proxyパターン）
 - [x] `types/subscription.ts`（Plan/Feature/PlanLimits型定義）
-- [ ] Stripe Dashboardでプロダクト・価格設定（キー取得後に実施）
-- [ ] 環境変数設定（.env.local + Vercel）
+- [x] Stripe Dashboardでプロダクト・価格設定（curl API経由で作成済み）
+- [x] 環境変数設定（.env.local + Vercel production/development）
 
 ## 修正履歴
 
