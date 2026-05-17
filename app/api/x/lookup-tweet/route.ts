@@ -45,7 +45,7 @@ export async function GET(request: Request) {
     }
 
     if (!json.data?.id) {
-      return NextResponse.json({ error: 'Unexpected X API response' }, { status: 502 })
+      return NextResponse.json({ error: 'Unexpected X API response' }, { status: 500 })
     }
 
     return NextResponse.json({

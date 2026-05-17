@@ -22,7 +22,7 @@ export async function GET(request: Request) {
     if (res.status === 404) {
       return NextResponse.json({ error: 'ユーザーが見つかりません' }, { status: 404 })
     }
-    return NextResponse.json({ error: `X API error: ${res.status}` }, { status: 502 })
+    return NextResponse.json({ error: `X API error: ${res.status}` }, { status: 500 })
   }
 
   const { data } = await res.json()

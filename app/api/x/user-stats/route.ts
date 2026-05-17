@@ -50,7 +50,7 @@ export async function GET(request: Request) {
     if (!response.ok) {
       const message = data.errors?.[0]?.message ?? `X API error: ${response.status}`
       console.error('[x/user-stats] X API error:', message)
-      return NextResponse.json({ error: message }, { status: 502 })
+      return NextResponse.json({ error: message }, { status: 500 })
     }
 
     const { followers_count, following_count, tweet_count, listed_count } =

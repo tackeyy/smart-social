@@ -98,7 +98,7 @@ export async function GET(request: Request) {
     if (!response.ok) {
       const message = data.errors?.[0]?.message ?? `X API error: ${response.status}`
       console.error('[x/mentions] X API error:', { status: response.status, message })
-      return NextResponse.json({ error: message }, { status: 502 })
+      return NextResponse.json({ error: message }, { status: 500 })
     }
 
     return NextResponse.json(data)
