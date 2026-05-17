@@ -13,10 +13,11 @@ function createServiceClient() {
   )
 }
 
-function extractPlanFromMetadata(metadata: Stripe.Metadata): Plan {
+function extractPlanFromMetadata(metadata: Stripe.Metadata): Plan | null {
   const plan = metadata.plan
   if (plan === 'pro' || plan === 'business') return plan
-  return 'free'
+  if (plan === 'free') return 'free'
+  return null
 }
 
 function toSubscriptionStatus(status: Stripe.Subscription.Status): SubscriptionStatus {
@@ -26,7 +27,7 @@ function toSubscriptionStatus(status: Stripe.Subscription.Status): SubscriptionS
     case 'canceled': return 'canceled'
     case 'past_due': return 'past_due'
     case 'incomplete': return 'incomplete'
-    default: return 'active'
+    default: return 'incomplete'
   }
 }
 
@@ -46,8 +47,8 @@ export async function POST(request: Request) {
       process.env.STRIPE_WEBHOOK_SECRET!
     )
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Webhook signature verification failed'
-    return NextResponse.json({ error: message }, { status: 400 })
+    console.error('[Webhook] Signature verification failed:', err)
+    return NextResponse.json({ error: 'Webhook signature verification failed' }, { status: 400 })
   }
 
   const supabase = createServiceClient()
@@ -62,8 +63,12 @@ export async function POST(request: Request) {
         const subscriptionId = session.subscription as string | null
 
         if (!userId || !customerId) break
+        if (!plan) {
+          console.error('[Webhook] checkout.session.completed: unknown plan in metadata, skipping')
+          break
+        }
 
-        await supabase.from('subscriptions').upsert(
+        const { error: upsertError } = await supabase.from('subscriptions').upsert(
           {
             user_id: userId,
             stripe_customer_id: customerId,
@@ -74,6 +79,10 @@ export async function POST(request: Request) {
           },
           { onConflict: 'user_id' }
         )
+        if (upsertError) {
+          console.error('[Webhook] DB upsert failed (checkout.session.completed):', upsertError)
+          return NextResponse.json({ error: 'Database error' }, { status: 500 })
+        }
         break
       }
 
@@ -93,10 +102,14 @@ export async function POST(request: Request) {
           ? new Date(firstItem.current_period_end * 1000).toISOString()
           : new Date().toISOString()
 
-        await supabase
+        const { error: updatePaymentError } = await supabase
           .from('subscriptions')
           .update({ current_period_end: periodEnd, updated_at: new Date().toISOString() })
           .eq('stripe_customer_id', customerId)
+        if (updatePaymentError) {
+          console.error('[Webhook] DB update failed (invoice.payment_succeeded):', updatePaymentError)
+          return NextResponse.json({ error: 'Database error' }, { status: 500 })
+        }
         break
       }
 
@@ -104,10 +117,14 @@ export async function POST(request: Request) {
         const invoice = event.data.object as Stripe.Invoice
         const customerId = invoice.customer as string
 
-        await supabase
+        const { error: updateFailedError } = await supabase
           .from('subscriptions')
           .update({ status: 'past_due', updated_at: new Date().toISOString() })
           .eq('stripe_customer_id', customerId)
+        if (updateFailedError) {
+          console.error('[Webhook] DB update failed (invoice.payment_failed):', updateFailedError)
+          return NextResponse.json({ error: 'Database error' }, { status: 500 })
+        }
         break
       }
 
@@ -121,7 +138,26 @@ export async function POST(request: Request) {
           ? new Date(subFirstItem.current_period_end * 1000).toISOString()
           : new Date().toISOString()
 
-        await supabase
+        if (!plan) {
+          // planが不明な場合はプランフィールドを変更せずにstatusと期間のみ更新
+          console.warn('[Webhook] customer.subscription.updated: unknown plan in metadata, skipping plan update')
+          const { error: updateStatusOnlyError } = await supabase
+            .from('subscriptions')
+            .update({
+              status,
+              current_period_end: periodEnd,
+              cancel_at_period_end: subscription.cancel_at_period_end,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('stripe_customer_id', customerId)
+          if (updateStatusOnlyError) {
+            console.error('[Webhook] DB update failed (customer.subscription.updated/status-only):', updateStatusOnlyError)
+            return NextResponse.json({ error: 'Database error' }, { status: 500 })
+          }
+          break
+        }
+
+        const { error: updateSubError } = await supabase
           .from('subscriptions')
           .update({
             plan,
@@ -131,6 +167,10 @@ export async function POST(request: Request) {
             updated_at: new Date().toISOString(),
           })
           .eq('stripe_customer_id', customerId)
+        if (updateSubError) {
+          console.error('[Webhook] DB update failed (customer.subscription.updated):', updateSubError)
+          return NextResponse.json({ error: 'Database error' }, { status: 500 })
+        }
         break
       }
 
@@ -138,7 +178,7 @@ export async function POST(request: Request) {
         const subscription = event.data.object as Stripe.Subscription
         const customerId = subscription.customer as string
 
-        await supabase
+        const { error: updateDeletedError } = await supabase
           .from('subscriptions')
           .update({
             plan: 'free',
@@ -148,13 +188,17 @@ export async function POST(request: Request) {
             updated_at: new Date().toISOString(),
           })
           .eq('stripe_customer_id', customerId)
+        if (updateDeletedError) {
+          console.error('[Webhook] DB update failed (customer.subscription.deleted):', updateDeletedError)
+          return NextResponse.json({ error: 'Database error' }, { status: 500 })
+        }
         break
       }
     }
 
     return NextResponse.json({ received: true }, { status: 200 })
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Webhook processing failed'
-    return NextResponse.json({ error: message }, { status: 500 })
+    console.error('[Webhook] Processing failed:', err)
+    return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 })
   }
 }

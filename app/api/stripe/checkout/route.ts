@@ -98,9 +98,10 @@ export async function POST(request: Request) {
       sessionParams.customer_email = user.email
     }
 
+    const today = new Date().toISOString().slice(0, 10)
     const session = await stripe.checkout.sessions.create(
       sessionParams,
-      { idempotencyKey: `checkout-${user.id}-${plan}-${billingInterval}-${Date.now()}` }
+      { idempotencyKey: `checkout-${user.id}-${plan}-${billingInterval}-${today}` }
     )
 
     if (!session.url) {
@@ -109,7 +110,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ url: session.url }, { status: 200 })
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Internal server error'
-    return NextResponse.json({ error: message }, { status: 500 })
+    console.error('[Checkout] Unexpected error:', err)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

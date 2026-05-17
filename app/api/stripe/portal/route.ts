@@ -30,7 +30,7 @@ export async function POST() {
 
     return NextResponse.json({ url: session.url }, { status: 200 })
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Internal server error'
-    return NextResponse.json({ error: message }, { status: 500 })
+    console.error('[Portal] Unexpected error:', err)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
