@@ -17,13 +17,15 @@ vi.mock('@/lib/ai/models', () => ({
 
 import { generateStyleProfile, generateDraftCandidates } from '@/lib/ai/client'
 
+const mockUsage = { inputTokens: 100, outputTokens: 50, totalTokens: 150 }
+
 describe('generateStyleProfile', () => {
   beforeEach(() => {
     vi.resetAllMocks()
   })
 
   it('テキストコンテンツなし（text が空文字列）の場合は "Claude APIから予期しないレスポンスが返りました" をthrowする', async () => {
-    mockGenerateText.mockResolvedValue({ text: '' })
+    mockGenerateText.mockResolvedValue({ text: '', usage: mockUsage })
 
     await expect(generateStyleProfile(['tweet1', 'tweet2'])).rejects.toThrow(
       'Claude APIから予期しないレスポンスが返りました'
@@ -31,7 +33,7 @@ describe('generateStyleProfile', () => {
   })
 
   it('JSON が抽出できない場合は "Claude APIのレスポンスからJSONを抽出できませんでした" をthrowする', async () => {
-    mockGenerateText.mockResolvedValue({ text: 'This is not JSON at all' })
+    mockGenerateText.mockResolvedValue({ text: 'This is not JSON at all', usage: mockUsage })
 
     await expect(generateStyleProfile(['tweet1'])).rejects.toThrow(
       'Claude APIのレスポンスからJSONを抽出できませんでした'
@@ -39,39 +41,35 @@ describe('generateStyleProfile', () => {
   })
 
   it('不正JSON の場合は "Claude APIのレスポンスをパースできませんでした" をthrowする', async () => {
-    // { で始まるが無効なJSON
-    mockGenerateText.mockResolvedValue({ text: '{invalid json content}' })
+    mockGenerateText.mockResolvedValue({ text: '{invalid json content}', usage: mockUsage })
 
     await expect(generateStyleProfile(['tweet1'])).rejects.toThrow(
       'Claude APIのレスポンスをパースできませんでした'
     )
   })
 
-  it('正常系: StyleProfile オブジェクトを返す', async () => {
+  it('正常系: profile と usage を返す', async () => {
     const profileJson = '{"tone": "casual", "emoji_usage": "rare", "avg_length": 80}'
-    mockGenerateText.mockResolvedValue({ text: profileJson })
+    mockGenerateText.mockResolvedValue({ text: profileJson, usage: mockUsage })
 
-    const result = await generateStyleProfile(['tweet1', 'tweet2'])
+    const { profile, usage } = await generateStyleProfile(['tweet1', 'tweet2'])
 
-    expect(result).toEqual({
-      tone: 'casual',
-      emoji_usage: 'rare',
-      avg_length: 80,
-    })
+    expect(profile).toEqual({ tone: 'casual', emoji_usage: 'rare', avg_length: 80 })
+    expect(usage).toEqual({ input_tokens: 100, output_tokens: 50 })
   })
 
   it('マークダウンコードブロックで包まれたJSONも正常にパースできる', async () => {
     const profileJson = '```json\n{"tone": "formal", "emoji_usage": "none"}\n```'
-    mockGenerateText.mockResolvedValue({ text: profileJson })
+    mockGenerateText.mockResolvedValue({ text: profileJson, usage: mockUsage })
 
-    const result = await generateStyleProfile(['tweet1'])
+    const { profile } = await generateStyleProfile(['tweet1'])
 
-    expect(result).toEqual({ tone: 'formal', emoji_usage: 'none' })
+    expect(profile).toEqual({ tone: 'formal', emoji_usage: 'none' })
   })
 
   it('100件超のツイートを渡しても最初の100件のみ generateText に渡される', async () => {
     const profileJson = '{"tone": "casual"}'
-    mockGenerateText.mockResolvedValue({ text: profileJson })
+    mockGenerateText.mockResolvedValue({ text: profileJson, usage: mockUsage })
 
     const tweets = Array.from({ length: 150 }, (_, i) => `tweet ${i + 1}`)
     await generateStyleProfile(tweets)
@@ -92,7 +90,7 @@ describe('generateDraftCandidates', () => {
   })
 
   it('テキストコンテンツなし（text が空文字列）の場合は "Unexpected response from Claude API" をthrowする', async () => {
-    mockGenerateText.mockResolvedValue({ text: '' })
+    mockGenerateText.mockResolvedValue({ text: '', usage: mockUsage })
 
     await expect(
       generateDraftCandidates('source tweet', { tone: 'casual' })
@@ -100,38 +98,38 @@ describe('generateDraftCandidates', () => {
   })
 
   it('JSON配列が抽出できない場合は "Failed to extract JSON array from Claude response" をthrowする', async () => {
-    mockGenerateText.mockResolvedValue({ text: 'No array here' })
+    mockGenerateText.mockResolvedValue({ text: 'No array here', usage: mockUsage })
 
     await expect(
       generateDraftCandidates('source tweet', { tone: 'casual' })
     ).rejects.toThrow('Failed to extract JSON array from Claude response')
   })
 
-  it('正常系: 3要素の候補配列を返す', async () => {
-    const candidates = ['candidate1', 'candidate2', 'candidate3']
-    mockGenerateText.mockResolvedValue({ text: JSON.stringify(candidates) })
+  it('正常系: candidates と usage を返す', async () => {
+    const candidatesArr = ['candidate1', 'candidate2', 'candidate3']
+    mockGenerateText.mockResolvedValue({ text: JSON.stringify(candidatesArr), usage: mockUsage })
 
-    const result = await generateDraftCandidates('source tweet', { tone: 'casual' })
+    const { candidates, usage } = await generateDraftCandidates('source tweet', { tone: 'casual' })
 
-    expect(result).toEqual(['candidate1', 'candidate2', 'candidate3'])
+    expect(candidates).toEqual(['candidate1', 'candidate2', 'candidate3'])
+    expect(usage).toEqual({ input_tokens: 100, output_tokens: 50 })
   })
 
   it('4件以上の候補が返ってきても最初の3件のみ返す', async () => {
-    const candidates = ['c1', 'c2', 'c3', 'c4', 'c5']
-    mockGenerateText.mockResolvedValue({ text: JSON.stringify(candidates) })
+    const candidatesArr = ['c1', 'c2', 'c3', 'c4', 'c5']
+    mockGenerateText.mockResolvedValue({ text: JSON.stringify(candidatesArr), usage: mockUsage })
 
-    const result = await generateDraftCandidates('source tweet', { tone: 'casual' })
+    const { candidates } = await generateDraftCandidates('source tweet', { tone: 'casual' })
 
-    expect(result).toHaveLength(3)
-    expect(result).toEqual(['c1', 'c2', 'c3'])
+    expect(candidates).toHaveLength(3)
+    expect(candidates).toEqual(['c1', 'c2', 'c3'])
   })
 
   it('instruction が省略（undefined）でもエラーなく実行できる', async () => {
-    const candidates = ['c1', 'c2', 'c3']
-    mockGenerateText.mockResolvedValue({ text: JSON.stringify(candidates) })
+    const candidatesArr = ['c1', 'c2', 'c3']
+    mockGenerateText.mockResolvedValue({ text: JSON.stringify(candidatesArr), usage: mockUsage })
 
-    await expect(
-      generateDraftCandidates('source tweet', { tone: 'casual' })
-    ).resolves.toEqual(['c1', 'c2', 'c3'])
+    const { candidates } = await generateDraftCandidates('source tweet', { tone: 'casual' })
+    expect(candidates).toEqual(['c1', 'c2', 'c3'])
   })
 })

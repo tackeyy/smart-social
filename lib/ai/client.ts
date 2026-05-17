@@ -10,12 +10,22 @@ export interface StyleProfile {
   [key: string]: unknown
 }
 
-export async function generateStyleProfile(tweets: string[]): Promise<StyleProfile> {
+export interface ClaudeUsage {
+  input_tokens: number
+  output_tokens: number
+}
+
+export async function generateStyleProfile(
+  tweets: string[]
+): Promise<{ profile: StyleProfile; usage: ClaudeUsage }> {
   if (tweets.length === 0) {
-    return { tone: '不明', emoji_usage: '不明', avg_length: 0, patterns: [], sample_phrases: [] }
+    return {
+      profile: { tone: '不明', emoji_usage: '不明', avg_length: 0, patterns: [], sample_phrases: [] },
+      usage: { input_tokens: 0, output_tokens: 0 },
+    }
   }
 
-  const { text } = await generateText({
+  const { text, usage } = await generateText({
     model: STYLE_PROFILE_MODEL,
     system: 'JSONのみを返してください。説明文・マークダウン・コードブロックは一切不要です。',
     prompt: `以下のツイートサンプルから文体プロファイルを生成してください。
@@ -43,7 +53,10 @@ ${tweets.slice(0, 100).map((t, i) => `[${i + 1}] ${t}`).join('\n')}
   }
 
   try {
-    return JSON.parse(jsonMatch[0]) as StyleProfile
+    return {
+      profile: JSON.parse(jsonMatch[0]) as StyleProfile,
+      usage: { input_tokens: usage.inputTokens ?? 0, output_tokens: usage.outputTokens ?? 0 },
+    }
   } catch {
     throw new Error('Claude APIのレスポンスをパースできませんでした')
   }
@@ -53,8 +66,8 @@ export async function generateDraftCandidates(
   sourceTweet: string,
   styleProfile: object,
   instruction?: string
-): Promise<string[]> {
-  const { text } = await generateText({
+): Promise<{ candidates: string[]; usage: ClaudeUsage }> {
+  const { text, usage } = await generateText({
     model: DRAFT_MODEL,
     prompt: `以下のツイートに対するリプライ案を3つ生成してください。
 文体プロファイルに従い、JSON配列形式で["候補1", "候補2", "候補3"]として出力してください。
@@ -81,11 +94,9 @@ ${sourceTweet}
     throw new Error('Failed to extract JSON array from Claude response')
   }
 
-  let candidates: string[]
-  try {
-    candidates = JSON.parse(jsonMatch[0]) as string[]
-  } catch {
-    throw new Error('Failed to parse JSON array from Claude response')
+  const candidates = (JSON.parse(jsonMatch[0]) as string[]).slice(0, 3)
+  return {
+    candidates,
+    usage: { input_tokens: usage.inputTokens ?? 0, output_tokens: usage.outputTokens ?? 0 },
   }
-  return candidates.slice(0, 3)
 }
