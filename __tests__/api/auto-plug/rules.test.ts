@@ -14,6 +14,13 @@ vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(),
 }))
 
+vi.mock('@/lib/subscription', () => ({
+  getUserPlan: vi.fn(() => Promise.resolve('pro')),
+  getPlanLimits: vi.fn(() => ({ aiGenerationsPerMonth: 100, xAccounts: 3, scheduledPostsPerMonth: Infinity, templates: Infinity, autoPlugRules: 3, evergreenRules: 3, teamMembers: 1, analyticsDays: 90 })),
+  canUseFeature: vi.fn(() => true),
+  getMonthlyAiLimit: vi.fn(() => 100),
+}))
+
 import { GET, POST } from '@/app/api/auto-plug/rules/route'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
@@ -100,14 +107,37 @@ describe('POST /api/auto-plug/rules', () => {
 
   it('正常なリクエストでは201とルールを返す', async () => {
     const newRule = { id: 'rule-new', threshold_type: 'likes', threshold_value: 50 }
+
+    let autoPlugCallCount = 0
     mockCreateClient.mockResolvedValue({
       auth: {
         getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null }),
       },
-      from: vi.fn().mockReturnValue({
-        insert: vi.fn().mockReturnThis(),
-        select: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data: newRule, error: null }),
+      from: vi.fn().mockImplementation((table: string) => {
+        if (table === 'x_accounts') {
+          // 所有権チェック: アカウントあり
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({ data: { id: 1 }, error: null }),
+          }
+        }
+        if (table === 'auto_plug_rules') {
+          autoPlugCallCount++
+          if (autoPlugCallCount === 1) {
+            // COUNT チェック: 0件（上限未達）
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockResolvedValue({ count: 0, error: null }),
+            }
+          }
+        }
+        // INSERT
+        return {
+          insert: vi.fn().mockReturnThis(),
+          select: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: newRule, error: null }),
+        }
       }),
     } as any)
 

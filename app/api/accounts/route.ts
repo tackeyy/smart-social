@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { getUserPlan, getPlanLimits } from '@/lib/subscription'
 
 export async function GET(_request: Request) {
   const supabase = await createClient()
@@ -59,6 +60,25 @@ export async function POST(request: Request) {
 
   if (!/^\d+$/.test(x_user_id as string)) {
     return NextResponse.json({ error: 'User IDは数値で入力してください' }, { status: 400 })
+  }
+
+  // プラン取得 → Xアカウント数上限チェック
+  const plan = await getUserPlan(supabase, user.id)
+  const xAccountLimit = getPlanLimits(plan).xAccounts
+  const { count: xAccountCount, error: countError } = await supabase
+    .from('x_accounts')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+
+  if (countError) {
+    console.error('[gating] count query failed:', countError)
+    return NextResponse.json({ error: 'サービスが一時的に利用できません' }, { status: 503 })
+  }
+  if ((xAccountCount ?? 0) >= xAccountLimit) {
+    return NextResponse.json(
+      { error: '連携できるXアカウント数の上限に達しました', upgrade_required: true },
+      { status: 402 }
+    )
   }
 
   const access_token = process.env.X_ACCESS_TOKEN ?? ''

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { checkMonthlyQuota } from '@/lib/usage/quota'
+import { checkMonthlyQuota, checkAiGenerationQuota } from '@/lib/usage/quota'
 
 const makeSupabase = (totalTokens: number) => ({
   from: vi.fn().mockReturnValue({
@@ -121,5 +121,108 @@ describe('checkMonthlyQuota', () => {
     const result = await fn(supabase as never, 'user-123')
 
     expect(result.allowed).toBe(true)
+  })
+})
+
+/**
+ * checkAiGenerationQuota のテスト
+ *
+ * 仕様:
+ * - プランごとの月間AI生成上限（getMonthlyAiLimit）に対して、当月の実績件数を count で取得し判定する
+ * - business プランは Infinity（DBクエリ不要で即許可）
+ * - DBエラー時は used=0, allowed: true でフォールバック
+ */
+describe('checkAiGenerationQuota', () => {
+  /**
+   * supabase の from/select/eq/gte チェーンをモックし、count を返すファクトリ
+   * @param count - 当月のAI生成件数
+   * @param error  - エラーオブジェクト（null なら正常）
+   */
+  const makeSupabase = (count: number | null, error: unknown = null) => ({
+    from: vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      gte: vi.fn().mockResolvedValue({ count, error }),
+    }),
+  })
+
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
+
+  it('free プラン・limit=10・used=5 → allowed: true', async () => {
+    // Arrange
+    const supabase = makeSupabase(5)
+
+    // Act
+    const result = await checkAiGenerationQuota(supabase as never, 'user-1', 'free')
+
+    // Assert
+    expect(result.allowed).toBe(true)
+    expect(result.used).toBe(5)
+    expect(result.limit).toBe(10)
+  })
+
+  it('free プラン・limit=10・used=10 → allowed: false（境界値：上限到達）', async () => {
+    // Arrange
+    const supabase = makeSupabase(10)
+
+    // Act
+    const result = await checkAiGenerationQuota(supabase as never, 'user-2', 'free')
+
+    // Assert
+    expect(result.allowed).toBe(false)
+    expect(result.used).toBe(10)
+  })
+
+  it('free プラン・limit=10・used=11 → allowed: false（上限超過）', async () => {
+    // Arrange
+    const supabase = makeSupabase(11)
+
+    // Act
+    const result = await checkAiGenerationQuota(supabase as never, 'user-3', 'free')
+
+    // Assert
+    expect(result.allowed).toBe(false)
+  })
+
+  it('pro プラン・limit=100・used=99 → allowed: true', async () => {
+    // Arrange
+    const supabase = makeSupabase(99)
+
+    // Act
+    const result = await checkAiGenerationQuota(supabase as never, 'user-4', 'pro')
+
+    // Assert
+    expect(result.allowed).toBe(true)
+    expect(result.used).toBe(99)
+    expect(result.limit).toBe(100)
+  })
+
+  it('business プラン・limit=Infinity → allowed: true（DBクエリ不要）', async () => {
+    // Arrange
+    const mockFrom = vi.fn()
+    const supabase = { from: mockFrom }
+
+    // Act
+    const result = await checkAiGenerationQuota(supabase as never, 'user-5', 'business')
+
+    // Assert
+    expect(result.allowed).toBe(true)
+    expect(result.limit).toBe(Infinity)
+    // Infinity プランはDBを叩かない
+    expect(mockFrom).not.toHaveBeenCalled()
+  })
+
+  it('DBクエリエラー時 → used=0, allowed: false（フェイルクローズ）', async () => {
+    // Arrange
+    const supabase = makeSupabase(null, new Error('DB connection failed'))
+
+    // Act
+    const result = await checkAiGenerationQuota(supabase as never, 'user-6', 'free')
+
+    // Assert
+    expect(result.allowed).toBe(false)
+    expect(result.used).toBe(0)
   })
 })

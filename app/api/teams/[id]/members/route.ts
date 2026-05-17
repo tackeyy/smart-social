@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { getUserPlan, getPlanLimits, canUseFeature } from '@/lib/subscription'
 
 function getAdminClient() {
   return createAdminClient(
@@ -79,6 +80,33 @@ export async function POST(
 
   if (!membership || !['owner', 'admin'].includes(membership.role)) {
     return NextResponse.json({ error: 'オーナーまたは管理者のみ招待できます' }, { status: 403 })
+  }
+
+  // プラン取得 → team-members featureチェック → チームメンバー数上限チェック
+  const plan = await getUserPlan(supabase, user.id)
+  if (!canUseFeature(plan, 'team-members')) {
+    return NextResponse.json(
+      { error: 'チームメンバー機能はBusinessプラン以上でご利用いただけます', upgrade_required: true },
+      { status: 402 }
+    )
+  }
+  const memberLimit = getPlanLimits(plan).teamMembers
+  if (isFinite(memberLimit)) {
+    const { count: memberCount, error: countError } = await supabase
+      .from('team_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('team_id', id)
+
+    if (countError) {
+      console.error('[gating] count query failed:', countError)
+      return NextResponse.json({ error: 'サービスが一時的に利用できません' }, { status: 503 })
+    }
+    if ((memberCount ?? 0) >= memberLimit) {
+      return NextResponse.json(
+        { error: 'チームメンバー数の上限に達しました', upgrade_required: true },
+        { status: 402 }
+      )
+    }
   }
 
   // email でユーザーを検索（service_role key 使用）

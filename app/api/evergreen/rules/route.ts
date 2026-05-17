@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { getUserPlan, getPlanLimits } from '@/lib/subscription'
 
 export async function GET() {
   const supabase = await createClient()
@@ -74,7 +75,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'interval_days は7〜365の範囲で指定してください' }, { status: 400 })
   }
 
-  // x_account_id の所有権チェック
+  // x_account_id の所有権チェック（プラン制限チェックより前に実施）
   const { data: account, error: accountError } = await supabase
     .from('x_accounts')
     .select('id')
@@ -84,6 +85,33 @@ export async function POST(request: Request) {
 
   if (accountError || !account) {
     return NextResponse.json({ error: '指定されたXアカウントが見つかりません' }, { status: 403 })
+  }
+
+  // プラン取得 → Evergreen ルール数上限チェック
+  const plan = await getUserPlan(supabase, user.id)
+  const evergreenLimit = getPlanLimits(plan).evergreenRules
+  if (evergreenLimit === 0) {
+    return NextResponse.json(
+      { error: 'Evergreen機能はProプラン以上でご利用いただけます', upgrade_required: true },
+      { status: 402 }
+    )
+  }
+  if (isFinite(evergreenLimit)) {
+    const { count: ruleCount, error: countError } = await supabase
+      .from('evergreen_rules')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+
+    if (countError) {
+      console.error('[gating] count query failed:', countError)
+      return NextResponse.json({ error: 'サービスが一時的に利用できません' }, { status: 503 })
+    }
+    if ((ruleCount ?? 0) >= evergreenLimit) {
+      return NextResponse.json(
+        { error: 'Evergreenルール数の上限に達しました', upgrade_required: true },
+        { status: 402 }
+      )
+    }
   }
 
   // 重複チェック

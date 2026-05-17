@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { getUserPlan, getPlanLimits, canUseFeature } from '@/lib/subscription'
 
 export async function GET(_request: Request) {
   const supabase = await createClient()
@@ -58,6 +59,44 @@ export async function POST(request: Request) {
   }
   if (body.template_text.length > 280) {
     return NextResponse.json({ error: 'template_text は280文字以内です' }, { status: 400 })
+  }
+
+  // x_account_id の所有権チェック（プラン制限チェックより前に実施）
+  const { data: account, error: accountError } = await supabase
+    .from('x_accounts')
+    .select('id')
+    .eq('id', body.x_account_id)
+    .eq('user_id', user.id)
+    .single()
+  if (accountError || !account) {
+    return NextResponse.json({ error: 'Xアカウントが見つかりません' }, { status: 403 })
+  }
+
+  // プラン取得 → Auto-plug ルール数上限チェック
+  const plan = await getUserPlan(supabase, user.id)
+  if (!canUseFeature(plan, 'auto-plug')) {
+    return NextResponse.json(
+      { error: 'Auto-plug機能はProプラン以上でご利用いただけます', upgrade_required: true },
+      { status: 402 }
+    )
+  }
+  const autoPlugLimit = getPlanLimits(plan).autoPlugRules
+  if (isFinite(autoPlugLimit)) {
+    const { count: ruleCount, error: countError } = await supabase
+      .from('auto_plug_rules')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+
+    if (countError) {
+      console.error('[gating] count query failed:', countError)
+      return NextResponse.json({ error: 'サービスが一時的に利用できません' }, { status: 503 })
+    }
+    if ((ruleCount ?? 0) >= autoPlugLimit) {
+      return NextResponse.json(
+        { error: '連携できるAuto-plugルール数の上限に達しました', upgrade_required: true },
+        { status: 402 }
+      )
+    }
   }
 
   const { data, error } = await supabase

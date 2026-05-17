@@ -1,3 +1,4 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Plan, PlanLimits, Feature } from '@/types/subscription'
 
 const PLAN_LIMITS: Record<Plan, PlanLimits> = {
@@ -64,4 +65,21 @@ export function canUseFeature(plan: Plan, feature: string): boolean {
 
 export function getMonthlyAiLimit(plan: Plan): number {
   return getPlanLimits(plan).aiGenerationsPerMonth
+}
+
+export async function getUserPlan(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<Plan> {
+  const { data, error } = await supabase
+    .from('subscriptions')
+    .select('plan, status')
+    .eq('user_id', userId)
+    .single()
+
+  if (error && error.code !== 'PGRST116') {
+    console.error('[getUserPlan] subscription fetch error:', error)
+  }
+  if (!data || !['active', 'trialing'].includes(data.status)) return 'free'
+  return data.plan as Plan
 }

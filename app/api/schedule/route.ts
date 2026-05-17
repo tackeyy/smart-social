@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { getUserPlan, getPlanLimits } from '@/lib/subscription'
 
 export async function GET() {
   const supabase = await createClient()
@@ -34,7 +35,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
   }
 
-  const body = await request.json()
+  let body: { draft_id?: string; scheduled_at?: string }
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'リクエストの形式が不正です' }, { status: 400 })
+  }
 
   if (!body.draft_id) {
     return NextResponse.json({ error: 'draft_id は必須です' }, { status: 400 })
@@ -49,6 +55,33 @@ export async function POST(request: Request) {
   const scheduledAt = new Date(body.scheduled_at)
   if (isNaN(scheduledAt.getTime()) || scheduledAt <= new Date()) {
     return NextResponse.json({ error: '過去の日時は指定できません' }, { status: 400 })
+  }
+
+  // プラン取得 → Free プランのみ月次スケジュール投稿数チェック
+  const plan = await getUserPlan(supabase, user.id)
+  const scheduledLimit = getPlanLimits(plan).scheduledPostsPerMonth
+  if (isFinite(scheduledLimit)) {
+    const now = new Date()
+    const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
+
+    const { count: scheduledCount, error: countError } = await supabase
+      .from('drafts')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .in('status', ['scheduled', 'posted'])
+      .not('scheduled_at', 'is', null)
+      .gte('scheduled_at', startOfMonth.toISOString())
+
+    if (countError) {
+      console.error('[gating] count query failed:', countError)
+      return NextResponse.json({ error: 'サービスが一時的に利用できません' }, { status: 503 })
+    }
+    if ((scheduledCount ?? 0) >= scheduledLimit) {
+      return NextResponse.json(
+        { error: '今月のスケジュール投稿数の上限に達しました', upgrade_required: true },
+        { status: 402 }
+      )
+    }
   }
 
   // scheduled_posts への INSERT ではなく、既存の drafts レコードに scheduled_at をセット
