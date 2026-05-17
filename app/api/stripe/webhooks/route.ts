@@ -80,12 +80,18 @@ export async function POST(request: Request) {
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice
         const customerId = invoice.customer as string
-        const subscriptionId = invoice.subscription as string | null
+        const rawSubscription = (invoice as unknown as { subscription?: string | { id: string } }).subscription
+        const subscriptionId = rawSubscription
+          ? (typeof rawSubscription === 'string' ? rawSubscription : rawSubscription.id)
+          : null
 
         if (!subscriptionId) break
 
         const subscription = await stripe.subscriptions.retrieve(subscriptionId)
-        const periodEnd = new Date(subscription.current_period_end * 1000).toISOString()
+        const firstItem = subscription.items.data[0]
+        const periodEnd = firstItem
+          ? new Date(firstItem.current_period_end * 1000).toISOString()
+          : new Date().toISOString()
 
         await supabase
           .from('subscriptions')
@@ -110,7 +116,10 @@ export async function POST(request: Request) {
         const customerId = subscription.customer as string
         const plan = extractPlanFromMetadata(subscription.metadata)
         const status = toSubscriptionStatus(subscription.status)
-        const periodEnd = new Date(subscription.current_period_end * 1000).toISOString()
+        const subFirstItem = subscription.items.data[0]
+        const periodEnd = subFirstItem
+          ? new Date(subFirstItem.current_period_end * 1000).toISOString()
+          : new Date().toISOString()
 
         await supabase
           .from('subscriptions')
