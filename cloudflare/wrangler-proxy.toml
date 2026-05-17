@@ -1,0 +1,6 @@
+name = "gyomu-smart-social-proxy"
+main = "smart-social-proxy.js"
+compatibility_date = "2026-05-17"
+routes = [
+  { pattern = "gyomu.ai/smart-social*", zone_name = "gyomu.ai" }
+]
