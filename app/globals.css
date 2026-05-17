@@ -71,15 +71,52 @@
   --radius-manavi-card: 6px;
 
   /* Font */
-  --font-sans: var(--font-inter-tight);
+  --font-sans: Arial, "Hiragino Kaku Gothic ProN", "Yu Gothic", "YuGothic", Meiryo, sans-serif;
 }
 
 body {
   background: rgb(var(--background));
   color: rgb(var(--foreground));
   font-feature-settings: "ss01"; /* single-story 'a' */
+  line-break: strict;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .tabular-nums {
   font-feature-settings: "tnum";
+}
+
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hero-float {
+  0% {
+    opacity: 0;
+    transform: translateY(22px) scale(0.98);
+  }
+  45% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(-8px) scale(1);
+  }
+}
+
+.animate-hero-rise {
+  animation: hero-rise 700ms ease-out both;
+}
+
+.animate-hero-float {
+  animation: hero-float 1200ms ease-out both;
 }
