@@ -13,6 +13,7 @@ const navLinks = [
   { href: '/dashboard/schedule', label: 'スケジュール' },
   { href: '/dashboard/analytics', label: '分析' },
   { href: '/dashboard/accounts', label: 'アカウント' },
+  { href: '/dashboard/usage', label: '使用量' },
   { href: '/dashboard/settings', label: '設定' },
 ]
 
