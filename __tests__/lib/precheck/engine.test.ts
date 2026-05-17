@@ -1,14 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { runPrecheck, check280CharLimit } from '@/lib/precheck/engine'
 
-const mockCreate = vi.fn()
+// Vercel AI SDK の generateText をモック
+// vi.mock はホイスティングされるため、mockGenerateText はモジュール外変数を参照できない。
+// vi.hoisted() を使ってホイスティング前に変数を作成する。
+const mockGenerateText = vi.hoisted(() => vi.fn())
 
-vi.mock('@anthropic-ai/sdk', () => {
-  class MockAnthropic {
-    messages = { create: mockCreate }
-  }
-  return { default: MockAnthropic }
-})
+vi.mock('ai', () => ({
+  generateText: mockGenerateText,
+}))
+
+// models モジュールをモック（実際の Anthropic モデル初期化を回避）
+vi.mock('@/lib/ai/models', () => ({
+  PRECHECK_MODEL: 'mock-precheck-model',
+}))
 
 describe('check280CharLimit', () => {
   it('280文字以内の場合はnullを返す', () => {
@@ -26,27 +31,24 @@ describe('check280CharLimit', () => {
 
 describe('runPrecheck', () => {
   beforeEach(() => {
-    mockCreate.mockReset()
+    mockGenerateText.mockReset()
   })
 
   it('280文字超のテキストはClaude APIを呼ばずにblockedを返す', async () => {
     const result = await runPrecheck('a'.repeat(281), 'post')
     expect(result.decision).toBe('blocked')
     expect(result.score).toBe(0)
-    expect(mockCreate).not.toHaveBeenCalled()
+    expect(mockGenerateText).not.toHaveBeenCalled()
   })
 
   it('Claude APIがauto_passを返した場合はauto_passになる', async () => {
-    mockCreate.mockResolvedValueOnce({
-      content: [{
-        type: 'text',
-        text: JSON.stringify({
-          decision: 'auto_pass',
-          score: 95,
-          reasons: [],
-          suggestions: [],
-        }),
-      }],
+    mockGenerateText.mockResolvedValueOnce({
+      text: JSON.stringify({
+        decision: 'auto_pass',
+        score: 95,
+        reasons: [],
+        suggestions: [],
+      }),
     })
 
     const result = await runPrecheck('今日は良い天気ですね！頑張りましょう。', 'post')
@@ -56,16 +58,13 @@ describe('runPrecheck', () => {
   })
 
   it('Claude APIがblockedを返した場合はblockedになる', async () => {
-    mockCreate.mockResolvedValueOnce({
-      content: [{
-        type: 'text',
-        text: JSON.stringify({
-          decision: 'blocked',
-          score: 5,
-          reasons: ['断定的税務助言が含まれています'],
-          suggestions: ['「〜できます」を「〜の可能性があります」に変更してください'],
-        }),
-      }],
+    mockGenerateText.mockResolvedValueOnce({
+      text: JSON.stringify({
+        decision: 'blocked',
+        score: 5,
+        reasons: ['断定的税務助言が含まれています'],
+        suggestions: ['「〜できます」を「〜の可能性があります」に変更してください'],
+      }),
     })
 
     const result = await runPrecheck('この節税方法で絶対に税金が下がります！', 'post')
@@ -74,16 +73,13 @@ describe('runPrecheck', () => {
   })
 
   it('Claude APIがmanual_reviewを返した場合はmanual_reviewになる', async () => {
-    mockCreate.mockResolvedValueOnce({
-      content: [{
-        type: 'text',
-        text: JSON.stringify({
-          decision: 'manual_review',
-          score: 60,
-          reasons: ['根拠が不明確な記述があります'],
-          suggestions: ['出典を明記することを検討してください'],
-        }),
-      }],
+    mockGenerateText.mockResolvedValueOnce({
+      text: JSON.stringify({
+        decision: 'manual_review',
+        score: 60,
+        reasons: ['根拠が不明確な記述があります'],
+        suggestions: ['出典を明記することを検討してください'],
+      }),
     })
 
     const result = await runPrecheck('最近の調査によると節税効果が高いらしいです', 'post')
@@ -92,11 +88,8 @@ describe('runPrecheck', () => {
   })
 
   it('scoreは0〜100の範囲内', async () => {
-    mockCreate.mockResolvedValueOnce({
-      content: [{
-        type: 'text',
-        text: JSON.stringify({ decision: 'auto_pass', score: 85, reasons: [], suggestions: [] }),
-      }],
+    mockGenerateText.mockResolvedValueOnce({
+      text: JSON.stringify({ decision: 'auto_pass', score: 85, reasons: [], suggestions: [] }),
     })
 
     const result = await runPrecheck('普通のツイートです', 'post')
@@ -105,8 +98,8 @@ describe('runPrecheck', () => {
   })
 
   it('Claude APIが不正なJSONを返した場合はmanual_reviewにフォールバック', async () => {
-    mockCreate.mockResolvedValueOnce({
-      content: [{ type: 'text', text: '不正なJSON' }],
+    mockGenerateText.mockResolvedValueOnce({
+      text: '不正なJSON',
     })
 
     const result = await runPrecheck('何かテキスト', 'post')

@@ -20,15 +20,15 @@ vi.mock('@/lib/rate-limit', () => ({
   checkRateLimit: vi.fn(() => ({ allowed: true, remainingSec: 0 })),
 }))
 
-// lib/claude/client をモック（M-2: createAnthropicハック削除に対応）
-vi.mock('@/lib/claude/client', () => ({
+// lib/ai/client をモック
+vi.mock('@/lib/ai/client', () => ({
   generateStyleProfile: vi.fn(),
   generateDraftCandidates: vi.fn(),
 }))
 
 import { POST } from '@/app/api/drafts/generate/route'
 import { createClient } from '@/lib/supabase/server'
-import { generateDraftCandidates } from '@/lib/claude/client'
+import { generateDraftCandidates } from '@/lib/ai/client'
 import { NextResponse } from 'next/server'
 
 const mockCreateClient = vi.mocked(createClient)
