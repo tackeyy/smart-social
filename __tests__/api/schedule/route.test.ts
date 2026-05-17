@@ -113,7 +113,7 @@ describe('POST /api/schedule', () => {
     const request = new Request('http://localhost/api/schedule', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ draft_id: 'd-1', scheduled_at: '2026-05-17T10:00:00Z' }),
+      body: JSON.stringify({ draft_id: 'd-1', scheduled_at: '2027-05-17T10:00:00Z' }),
     })
     await POST(request)
     expect(mockNextResponseJson).toHaveBeenCalledWith(
@@ -144,7 +144,7 @@ describe('POST /api/schedule', () => {
 
   it('認証済みの場合は201とスケジュールデータを返す', async () => {
     // drafts の UPDATE で scheduled_at と status='scheduled' をセット
-    const updated = { id: 'd-1', scheduled_at: '2026-05-17T10:00:00Z', status: 'scheduled' }
+    const updated = { id: 'd-1', scheduled_at: '2027-05-17T10:00:00Z', status: 'scheduled' }
     mockCreateClient.mockResolvedValue({
       auth: {
         getUser: vi.fn().mockResolvedValue({
@@ -163,7 +163,7 @@ describe('POST /api/schedule', () => {
     const request = new Request('http://localhost/api/schedule', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ draft_id: 'd-1', scheduled_at: '2026-05-17T10:00:00Z' }),
+      body: JSON.stringify({ draft_id: 'd-1', scheduled_at: '2027-05-17T10:00:00Z' }),
     })
     await POST(request)
     expect(mockNextResponseJson).toHaveBeenCalledWith(updated, { status: 201 })

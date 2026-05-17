@@ -137,10 +137,10 @@ export default function Home() {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8">
           <Link href="/" aria-label="Smart Social トップ" className="flex items-center">
             <Image
-              src="/smart-social/brand/smart-social-logo.png"
+              src="/smart-social/brand/smart-social-logo.svg"
               alt="Smart Social"
-              width={160}
-              height={30}
+              width={320}
+              height={60}
               priority
               className="h-8 w-auto"
             />

@@ -118,7 +118,8 @@ describe('GET /api/x/mentions', () => {
     const request = new Request('http://localhost/api/x/mentions')
     await GET(request)
     expect(mockNextResponseJson).toHaveBeenCalledWith(
-      expect.objectContaining({ data: mockMentions })
+      expect.objectContaining({ data: mockMentions }),
+      { headers: { 'Cache-Control': 'no-store' } }
     )
   })
 })

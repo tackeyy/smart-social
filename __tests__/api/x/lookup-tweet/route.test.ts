@@ -184,7 +184,7 @@ describe('GET /api/x/lookup-tweet', () => {
 
     expect(mockNextResponseJson).toHaveBeenCalledWith(
       expect.objectContaining({ error: expect.any(String) }),
-      { status: 502 }
+      { status: 500 }
     )
   })
 

@@ -93,7 +93,7 @@ describe('GET /api/x/lookup-user', () => {
     )
   })
 
-  it('X API が 500 の場合は502を返す', async () => {
+  it('X API が 500 の場合は500を返す', async () => {
     mockFetchResponse(500, { errors: [{ message: 'Internal Server Error' }] })
 
     const request = makeRequest('http://localhost/api/x/lookup-user?username=testuser')
@@ -101,7 +101,7 @@ describe('GET /api/x/lookup-user', () => {
 
     expect(mockNextResponseJson).toHaveBeenCalledWith(
       { error: 'X API error: 500' },
-      { status: 502 }
+      { status: 500 }
     )
   })
 
